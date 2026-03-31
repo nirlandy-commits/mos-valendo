@@ -45,6 +45,7 @@ function isRecoveryRedirect() {
 }
 
 const STORAGE_KEY = "mos-stitch-faithful";
+const FORCE_LOGIN_KEY = "mos-force-login";
 
 const planImages = {
   breakfast:
@@ -403,6 +404,18 @@ function loadState() {
   return structuredClone(defaultState);
 }
 
+function shouldOpenLoginAfterReload() {
+  try {
+    if (sessionStorage.getItem(FORCE_LOGIN_KEY) === "1") {
+      sessionStorage.removeItem(FORCE_LOGIN_KEY);
+      return true;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+  return false;
+}
+
 function summarizeFoods(foods = []) {
   return foods.reduce(
     (acc, food) => {
@@ -424,17 +437,17 @@ function TopBar({ title = "MOS", leftIcon = "menu", onLeft, onSearch, onRight, c
   return html`
     <header className="fixed top-0 w-full z-50 bg-white">
       <div className="flex justify-between items-center px-6 h-16 w-full max-w-screen-xl mx-auto">
-        <button className="hover:opacity-80 transition-opacity active:scale-95" onClick=${onLeft}>
+        <button type="button" className="hover:opacity-80 transition-opacity active:scale-95" onClick=${onLeft}>
           <${Icon} name=${leftIcon} className="text-[#292B2D]" />
         </button>
         <h1 className=${centerBold ? "text-xl font-black text-[#292B2D]" : "font-bold text-base text-[#292B2D]"}>${title}</h1>
         ${
           rightSlot ||
           html`<div className="flex items-center gap-4">
-            <button className="hover:opacity-80 transition-opacity active:scale-95" onClick=${onSearch}>
+            <button type="button" className="hover:opacity-80 transition-opacity active:scale-95" onClick=${onSearch}>
               <${Icon} name="search" className="text-[#292B2D]" />
             </button>
-            <button className="hover:opacity-80 transition-opacity active:scale-95" onClick=${onRight}>
+            <button type="button" className="hover:opacity-80 transition-opacity active:scale-95" onClick=${onRight}>
               <${Icon} name="notifications" className="text-[#292B2D]" />
             </button>
           </div>`
@@ -454,10 +467,10 @@ function NotificationsPanel({ items, onClose, onOpen, onClear }) {
             <h2 className="text-[1.5rem] font-bold text-jet-black">Notificações</h2>
           </div>
           <div className="flex items-center gap-2">
-            <button className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center hover:opacity-80 transition-opacity active:scale-95" onClick=${onClear} title="Limpar notificações">
+            <button type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center hover:opacity-80 transition-opacity active:scale-95" onClick=${onClear} title="Limpar notificações">
               <${Icon} name="cleaning_services" className="text-[#292B2D]" />
             </button>
-            <button className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center hover:opacity-80 transition-opacity active:scale-95" onClick=${onClose}>
+            <button type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center hover:opacity-80 transition-opacity active:scale-95" onClick=${onClose}>
               <${Icon} name="close" className="text-[#292B2D]" />
             </button>
           </div>
@@ -469,7 +482,7 @@ function NotificationsPanel({ items, onClose, onOpen, onClear }) {
                 <div className="flex flex-col gap-3">
                   ${items.map(
                     (item) => html`
-                      <button className="w-full bg-surface-container-low rounded-xl p-4 text-left flex items-start gap-4 active:scale-[0.98] transition-transform" onClick=${() => onOpen(item)}>
+                      <button type="button" className="w-full bg-surface-container-low rounded-xl p-4 text-left flex items-start gap-4 active:scale-[0.98] transition-transform" onClick=${() => onOpen(item)}>
                         <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shrink-0">
                           <${Icon} name=${item.icon} className="text-[#292B2D]" />
                         </div>
@@ -518,24 +531,24 @@ function FoodCalendarPanel({ selectedDate, monthDate, markedDates, todayKey, onC
             <span className="text-[0.6875rem] font-medium text-royal-blue">Comida</span>
             <h2 className="text-[1.35rem] font-bold text-jet-black">Escolher data</h2>
           </div>
-          <button className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onClose}>
+          <button type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onClose}>
             <${Icon} name="close" className="text-[#292B2D]" />
           </button>
         </div>
 
         <div className="flex items-center justify-between">
-          <button className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onPrevMonth}>
+          <button type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onPrevMonth}>
             <${Icon} name="chevron_left" className="text-[#292B2D]" />
           </button>
           <span className="font-bold text-jet-black capitalize">${formatMonthLabel(`${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}-01`)}</span>
-          <button className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onNextMonth}>
+          <button type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onNextMonth}>
             <${Icon} name="chevron_right" className="text-[#292B2D]" />
           </button>
         </div>
 
         ${selectedDate !== todayKey
           ? html`
-              <button className="w-full min-h-11 rounded-[10px] bg-[#fff4ef] border border-[#ffd8ce] text-[#EF5F37] font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform" onClick=${onGoToday}>
+              <button type="button" className="w-full min-h-11 rounded-[10px] bg-[#fff4ef] border border-[#ffd8ce] text-[#EF5F37] font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform" onClick=${onGoToday}>
                 <${Icon} name="today" className="text-[#EF5F37]" />
                 <span>Ver hoje</span>
               </button>
@@ -551,7 +564,7 @@ function FoodCalendarPanel({ selectedDate, monthDate, markedDates, todayKey, onC
             const isSelected = key === selectedDate;
             const isMarked = markedDates.has(key);
             return html`
-              <button className=${`h-12 rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform ${isSelected ? "bg-[#DFF37D] text-jet-black" : "bg-surface-container-low text-jet-black"}`} onClick=${() => onPickDate(key)}>
+              <button type="button" className=${`h-12 rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform ${isSelected ? "bg-[#DFF37D] text-jet-black" : "bg-surface-container-low text-jet-black"}`} onClick=${() => onPickDate(key)}>
                 <span className="font-bold">${Number(key.slice(-2))}</span>
                 <span className=${`w-1.5 h-1.5 rounded-full ${isMarked ? "bg-[#EF5F37]" : "bg-transparent"}`}></span>
               </button>
@@ -594,24 +607,24 @@ function WaterHistoryPanel({
             <span className="text-sm text-[#4558C8]">Água</span>
             <h2 className="text-[1.35rem] font-bold text-jet-black">Histórico de hidratação</h2>
           </div>
-          <button className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onClose}>
+          <button type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onClose}>
             <${Icon} name="close" className="text-[#292B2D]" />
           </button>
         </div>
 
         <div className="flex items-center justify-between shrink-0">
-          <button className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onPrevMonth}>
+          <button type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onPrevMonth}>
             <${Icon} name="chevron_left" className="text-[#292B2D]" />
           </button>
           <span className="font-bold text-jet-black capitalize">${formatMonthLabel(`${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}-01`)}</span>
-          <button className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onNextMonth}>
+          <button type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center active:scale-95" onClick=${onNextMonth}>
             <${Icon} name="chevron_right" className="text-[#292B2D]" />
           </button>
         </div>
 
         ${selectedDate !== todayKey
           ? html`
-              <button className="w-full min-h-11 rounded-[10px] bg-[#fff4ef] border border-[#ffd8ce] text-[#EF5F37] font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform shrink-0" onClick=${onGoToday}>
+              <button type="button" className="w-full min-h-11 rounded-[10px] bg-[#fff4ef] border border-[#ffd8ce] text-[#EF5F37] font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform shrink-0" onClick=${onGoToday}>
                 <${Icon} name="today" className="text-[#EF5F37]" />
                 <span>Ver hoje</span>
               </button>
@@ -627,7 +640,7 @@ function WaterHistoryPanel({
             const isSelected = key === selectedDate;
             const isMarked = markedDates.has(key);
             return html`
-              <button className=${`h-12 rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform ${isSelected ? "bg-[#4558C8] text-white" : "bg-surface-container-low text-jet-black"}`} onClick=${() => onPickDate(key)}>
+              <button type="button" className=${`h-12 rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform ${isSelected ? "bg-[#4558C8] text-white" : "bg-surface-container-low text-jet-black"}`} onClick=${() => onPickDate(key)}>
                 <span className="font-bold">${Number(key.slice(-2))}</span>
                 <span className=${`w-1.5 h-1.5 rounded-full ${isMarked ? "bg-[#EF5F37]" : isSelected ? "bg-white/70" : "bg-transparent"}`}></span>
               </button>
@@ -649,7 +662,7 @@ function ContextNav({ items }) {
     <nav className="flex flex-wrap gap-2">
       ${items.map(
         (item) => html`
-          <button className=${`px-4 py-2 rounded-xl text-sm font-bold transition-transform active:scale-95 ${item.primary ? "bg-[#EF5F37] text-white" : "bg-surface-container-low text-jet-black"}`} onClick=${item.onClick}>
+          <button type="button" className=${`px-4 py-2 rounded-xl text-sm font-bold transition-transform active:scale-95 ${item.primary ? "bg-[#EF5F37] text-white" : "bg-surface-container-low text-jet-black"}`} onClick=${item.onClick}>
             ${item.label}
           </button>
         `,
@@ -675,14 +688,14 @@ function MenuDrawer({ onClose, onSelect }) {
             <span className="text-[0.6875rem] font-medium text-royal-blue">MOS</span>
             <h2 className="text-[1.75rem] font-bold text-jet-black">Menu</h2>
           </div>
-          <button className="hover:opacity-80 transition-opacity active:scale-95" onClick=${onClose}>
+          <button type="button" className="hover:opacity-80 transition-opacity active:scale-95" onClick=${onClose}>
             <${Icon} name="close" className="text-[#292B2D]" />
           </button>
         </div>
         <div className="flex flex-col gap-1">
           ${items.map(
             (item) => html`
-              <button className="w-full rounded-xl px-4 py-3 text-left font-medium text-jet-black active:scale-[0.98] transition-transform flex items-center gap-4 hover:bg-surface-container-low" onClick=${() => onSelect(item.label)}>
+              <button type="button" className="w-full rounded-xl px-4 py-3 text-left font-medium text-jet-black active:scale-[0.98] transition-transform flex items-center gap-4 hover:bg-surface-container-low" onClick=${() => onSelect(item.label)}>
                 <div className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center">
                   <${Icon} name=${item.icon} className="text-[#292B2D]" />
                 </div>
@@ -797,8 +810,8 @@ function FoodItem({ food, onEdit, onDelete, onOpen, dark = false }) {
           <p className="text-[0.6875rem] font-medium text-primary">${food.quantity} • ${food.calories} kcal</p>
           <p className="text-[0.75rem] text-on-surface-variant mt-1">${food.benefit}</p>
           <div className="flex gap-3 mt-2">
-            <button className="text-[0.6875rem] font-bold text-[#4558C8]" onClick=${(e) => { e.stopPropagation(); onEdit(); }}>Editar</button>
-            <button className="text-[0.6875rem] font-bold text-error" onClick=${(e) => { e.stopPropagation(); onDelete(); }}>Excluir</button>
+            <button type="button" className="text-[0.6875rem] font-bold text-[#4558C8]" onClick=${(e) => { e.stopPropagation(); onEdit(); }}>Editar</button>
+            <button type="button" className="text-[0.6875rem] font-bold text-error" onClick=${(e) => { e.stopPropagation(); onDelete(); }}>Excluir</button>
           </div>
         </div>
       </div>
@@ -816,7 +829,7 @@ function Modal({ title, children, onClose }) {
           <h2 className="text-[1.75rem] font-bold text-jet-black leading-tight">${title}</h2>
         </div>
         ${children}
-        <button className="w-full h-14 bg-surface-container-low text-jet-black rounded-lg font-bold text-base hover:bg-surface-container-highest active:scale-[0.98] transition-all" onClick=${onClose}>Cancelar</button>
+        <button type="button" className="w-full h-14 bg-surface-container-low text-jet-black rounded-lg font-bold text-base hover:bg-surface-container-highest active:scale-[0.98] transition-all" onClick=${onClose}>Cancelar</button>
       </div>
     </div>
   `;
@@ -828,7 +841,7 @@ function AuthWordmark() {
 
 function App() {
   const [state, setState] = useState(loadState);
-  const [screen, setScreen] = useState(() => (loadState().auth?.signedIn ? "home" : "welcome"));
+  const [screen, setScreen] = useState(() => (shouldOpenLoginAfterReload() ? "login" : loadState().auth?.signedIn ? "home" : "welcome"));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsCleared, setNotificationsCleared] = useState(false);
@@ -1392,8 +1405,22 @@ function App() {
           confirmLabel: "Confirmar",
           onConfirm: async () => {
             setDrawerOpen(false);
+            setNotificationsOpen(false);
+            setConfirmAction(null);
+            setModal(null);
             clearAuthNotice();
-            setLoginForm({ email: state.auth?.email || state.profile.email || "", password: "" });
+            recoveryFlowRef.current = false;
+            setPasswordRecoveryReady(false);
+            setShowLoginPassword(false);
+            setShowSignupPassword(false);
+            setShowSignupConfirmPassword(false);
+            setShowResetPassword(false);
+            setShowResetPasswordConfirm(false);
+            setRecoverEmail("");
+            setResetPasswordForm({ password: "", confirmPassword: "" });
+            setSignupForm({ name: "", email: "", password: "", confirmPassword: "", age: "", weight: "", height: "", goal: "lose", acceptedTerms: false });
+
+            const nextEmail = state.auth?.email || state.profile?.email || "";
             if (authConfigured) {
               setAuthBusy(true);
               const result = await signOutUser();
@@ -1403,17 +1430,28 @@ function App() {
                 return;
               }
             }
-            setState((current) => ({
+
+            const nextState = {
               ...structuredClone(defaultState),
               auth: {
                 ...structuredClone(defaultState).auth,
-                registered: current.auth?.registered ?? false,
+                registered: true,
                 signedIn: false,
-                email: current.auth?.email || current.profile?.email || "",
+                email: nextEmail,
                 password: "",
               },
-            }));
-            setScreen("login");
+            };
+
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+              sessionStorage.setItem(FORCE_LOGIN_KEY, "1");
+            } catch (error) {
+              console.error(error);
+            }
+
+            setState(nextState);
+            setLoginForm({ email: nextEmail, password: "" });
+            window.location.assign(`${window.location.origin}${window.location.pathname}`);
           },
         });
         return;
@@ -4535,7 +4573,7 @@ OLD = nil
           <${Modal} title=${confirmAction.title || "Confirmar"} onClose=${() => setConfirmAction(null)}>
             <div className="flex flex-col gap-5">
               <p className="text-sm leading-relaxed text-on-surface-variant">${confirmAction.message || "Tem certeza que deseja apagar este item?"}</p>
-              <button className="w-full h-14 bg-[#EF5F37] text-white rounded-[10px] font-bold" onClick=${handleConfirmAction}>
+              <button type="button" className="w-full h-14 bg-[#EF5F37] text-white rounded-[10px] font-bold" onClick=${handleConfirmAction}>
                 ${confirmAction.confirmLabel || "Confirmar"}
               </button>
             </div>
