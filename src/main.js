@@ -59,6 +59,10 @@ const defaultState = {
     email: "",
     city: "",
     birthday: "",
+    weight: 0,
+    height: 0,
+    age: 0,
+    targetWeight: 0,
   },
   feedbackEntries: [],
   measureEntries: [
@@ -172,6 +176,23 @@ function formatMonthLabel(value) {
 
 function round(value) {
   return Math.round((Number(value) || 0) * 10) / 10;
+}
+
+function calculateSuggestedCalories({ weight, height, age, goal }) {
+  const safeWeight = Number(weight) || 0;
+  const safeHeight = Number(height) || 0;
+  const safeAge = Number(age) || 0;
+  if (!safeWeight || !safeHeight || !safeAge) return 0;
+  const maintenance = safeWeight * 24 + safeHeight * 4 - safeAge * 3;
+  const offset = goal === "gain" ? 250 : goal == "maintain" ? 0 : -400;
+  const suggested = maintenance + offset;
+  return Math.max(1200, Math.min(4000, Math.round(suggested / 10) * 10));
+}
+
+function getGoalMeta(goal) {
+  if (goal === "maintain") return { label: "Plano atual: Manter peso", focus: "Manutenção com rotina estável" };
+  if (goal === "gain") return { label: "Plano atual: Ganhar massa", focus: "Superávit leve com consistência" };
+  return { label: "Plano atual: Perder peso", focus: "Déficit calórico com mais constância" };
 }
 
 function computeBmi(weight, heightCm) {
@@ -342,6 +363,10 @@ function migrate(raw) {
       email: raw.profile?.email || defaultState.profile.email,
       city: raw.profile?.city || defaultState.profile.city,
       birthday: raw.profile?.birthday || defaultState.profile.birthday,
+      weight: Number(raw.profile?.weight) || 0,
+      height: Number(raw.profile?.height) || 0,
+      age: Number(raw.profile?.age) || 0,
+      targetWeight: Number(raw.profile?.targetWeight || raw.profile?.target_weight) || 0,
     },
     feedbackEntries: Array.isArray(raw.feedbackEntries) ? raw.feedbackEntries : [],
     measureEntries: Array.isArray(raw.measureEntries)
@@ -832,7 +857,7 @@ function App() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [draftGuard, setDraftGuard] = useState({ key: null, dirty: false });
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [signupForm, setSignupForm] = useState({ name: "", email: "", password: "", confirmPassword: "", acceptedTerms: false });
+  const [signupForm, setSignupForm] = useState({ name: "", email: "", password: "", confirmPassword: "", age: "", weight: "", height: "", goal: "lose", acceptedTerms: false });
   const [recoverEmail, setRecoverEmail] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const [authNoticeTitle, setAuthNoticeTitle] = useState("");
@@ -1271,6 +1296,10 @@ function App() {
         activeGoal: result.profile?.goal || current.profile.activeGoal,
         planFocus: result.profile?.plan_focus || current.profile.planFocus,
         planNotes: result.profile?.plan_notes || current.profile.planNotes,
+        weight: Number(result.profile?.weight) || current.profile.weight,
+        height: Number(result.profile?.height) || current.profile.height,
+        age: Number(result.profile?.age) || current.profile.age,
+        targetWeight: Number(result.profile?.target_weight) || current.profile.targetWeight,
       },
       measureEntries: Array.isArray(result.measureEntries) ? result.measureEntries : current.measureEntries,
       supplements: Array.isArray(result.supplements) ? result.supplements : current.supplements,
@@ -1428,8 +1457,14 @@ function App() {
     const email = signupForm.email.trim().toLowerCase();
     const password = signupForm.password;
     const confirmPassword = signupForm.confirmPassword;
+    const age = Number(signupForm.age) || 0;
+    const weight = Number(signupForm.weight) || 0;
+    const height = Number(signupForm.height) || 0;
+    const goal = signupForm.goal || "lose";
+    const calorieTarget = calculateSuggestedCalories({ weight, height, age, goal });
+    const goalMeta = getGoalMeta(goal);
 
-    if (!name || !email || !password || !confirmPassword || !signupForm.acceptedTerms) return;
+    if (!name || !email || !password || !confirmPassword || !signupForm.acceptedTerms || !age || !weight || !height) return;
     if (password !== confirmPassword) {
       showAuthNotice("As senhas precisam ser iguais para concluir o cadastro.");
       return;
@@ -1437,7 +1472,7 @@ function App() {
 
     if (authConfigured) {
       setAuthBusy(true);
-      const result = await signUpWithEmail({ name, email, password });
+      const result = await signUpWithEmail({ name, email, password, age, weight, height, calorieTarget, goal: goalMeta.label, planFocus: goalMeta.focus });
       setAuthBusy(false);
 
       if (!result.ok) {
@@ -1454,10 +1489,17 @@ function App() {
         };
         draft.profile.name = name;
         draft.profile.email = email;
+        draft.profile.age = age;
+        draft.profile.weight = weight;
+        draft.profile.height = height;
+        draft.profile.targetWeight = goal === "lose" ? Math.max(0, weight - 5) : goal === "gain" ? weight + 3 : weight;
+        draft.profile.calorieTarget = calorieTarget || draft.profile.calorieTarget;
+        draft.profile.activeGoal = goalMeta.label;
+        draft.profile.planFocus = goalMeta.focus;
       });
 
       setLoginForm({ email, password: "" });
-      setSignupForm({ name: "", email: "", password: "", confirmPassword: "", acceptedTerms: false });
+      setSignupForm({ name: "", email: "", password: "", confirmPassword: "", age: "", weight: "", height: "", goal: "lose", acceptedTerms: false });
 
       if (result.needsEmailConfirmation) {
         showAuthNotice(
@@ -1485,6 +1527,13 @@ function App() {
       };
       draft.profile.name = name;
       draft.profile.email = email;
+      draft.profile.age = age;
+      draft.profile.weight = weight;
+      draft.profile.height = height;
+      draft.profile.targetWeight = goal === "lose" ? Math.max(0, weight - 5) : goal === "gain" ? weight + 3 : weight;
+      draft.profile.calorieTarget = calorieTarget || draft.profile.calorieTarget;
+      draft.profile.activeGoal = goalMeta.label;
+      draft.profile.planFocus = goalMeta.focus;
     });
 
     showAuthNotice(`${getSupabaseSetupMessage()} Enquanto isso, o cadastro continua em modo de demonstração.`, {
@@ -1492,7 +1541,7 @@ function App() {
       title: "Modo de demonstração",
     });
     setLoginForm({ email, password: "" });
-    setSignupForm({ name: "", email: "", password: "", confirmPassword: "", acceptedTerms: false });
+    setSignupForm({ name: "", email: "", password: "", confirmPassword: "", age: "", weight: "", height: "", goal: "lose", acceptedTerms: false });
     setScreen("home");
   }
 
@@ -1715,6 +1764,10 @@ function App() {
       email: String(formData.get("email") || "").trim(),
       city: String(formData.get("city") || "").trim(),
       birthday: String(formData.get("birthday") || "").trim(),
+      weight: Number(formData.get("weight")) || state.profile.weight,
+      height: Number(formData.get("height")) || state.profile.height,
+      age: Number(formData.get("age")) || state.profile.age,
+      targetWeight: Number(formData.get("targetWeight")) || state.profile.targetWeight,
       calorieTarget: Number(formData.get("calorieTarget")) || state.profile.calorieTarget,
       waterTargetMl: Number(formData.get("waterTargetMl")) || state.profile.waterTargetMl,
     };
@@ -1738,6 +1791,10 @@ function App() {
       draft.profile.email = nextProfile.email;
       draft.profile.city = nextProfile.city;
       draft.profile.birthday = nextProfile.birthday;
+      draft.profile.weight = nextProfile.weight;
+      draft.profile.height = nextProfile.height;
+      draft.profile.age = nextProfile.age;
+      draft.profile.targetWeight = nextProfile.targetWeight;
       draft.profile.calorieTarget = nextProfile.calorieTarget;
       draft.profile.waterTargetMl = nextProfile.waterTargetMl;
       draft.auth.email = nextProfile.email || draft.auth.email;
@@ -2144,11 +2201,20 @@ function App() {
   }
 
   function renderSignup() {
+    const suggestedCalories = calculateSuggestedCalories({
+      weight: signupForm.weight,
+      height: signupForm.height,
+      age: signupForm.age,
+      goal: signupForm.goal,
+    });
     const isReady =
       signupForm.name.trim() &&
       signupForm.email.trim() &&
       signupForm.password &&
       signupForm.confirmPassword &&
+      signupForm.age &&
+      signupForm.weight &&
+      signupForm.height &&
       signupForm.acceptedTerms;
 
     return html`
@@ -2182,6 +2248,47 @@ function App() {
                 const value = e.currentTarget.value;
                 setSignupForm((current) => ({ ...current, email: value }));
               }} placeholder="exemplo@mos.app" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[0.8rem] font-bold text-[#111]">Idade</label>
+                <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="number" min="10" step="1" value=${signupForm.age} onInput=${(e) => {
+                  const value = e.currentTarget.value;
+                  setSignupForm((current) => ({ ...current, age: value }));
+                }} placeholder="30" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[0.8rem] font-bold text-[#111]">Altura (cm)</label>
+                <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="number" min="100" step="1" value=${signupForm.height} onInput=${(e) => {
+                  const value = e.currentTarget.value;
+                  setSignupForm((current) => ({ ...current, height: value }));
+                }} placeholder="170" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[0.8rem] font-bold text-[#111]">Peso atual (kg)</label>
+                <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="number" min="20" step="0.1" value=${signupForm.weight} onInput=${(e) => {
+                  const value = e.currentTarget.value;
+                  setSignupForm((current) => ({ ...current, weight: value }));
+                }} placeholder="77.7" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[0.8rem] font-bold text-[#111]">Objetivo</label>
+                <select className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111] bg-white" value=${signupForm.goal} onChange=${(e) => {
+                  const value = e.currentTarget.value;
+                  setSignupForm((current) => ({ ...current, goal: value }));
+                }}>
+                  <option value="lose">Perder peso</option>
+                  <option value="maintain">Manter peso</option>
+                  <option value="gain">Ganhar massa</option>
+                </select>
+              </div>
+            </div>
+            <div className="rounded-[10px] border border-[#111]/10 bg-[#f7f8fb] p-4 space-y-1">
+              <p className="text-[0.78rem] font-bold text-[#6e7178]">Meta calórica sugerida</p>
+              <p className="text-[1.8rem] font-black text-[#111]">${suggestedCalories ? `${suggestedCalories.toLocaleString("pt-BR")} kcal` : "Preencha seus dados"}</p>
+              <p className="text-sm leading-snug text-[#6e7178]">Você poderá editar essa meta depois em Meu perfil.</p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">

@@ -153,7 +153,7 @@ export async function getCurrentAuthState() {
   };
 }
 
-export async function signUpWithEmail({ name, email, password }) {
+export async function signUpWithEmail({ name, email, password, age = 0, weight = 0, height = 0, calorieTarget = 0, goal = "", planFocus = "" }) {
   const client = getSupabaseClient();
   if (!client) {
     return { ok: false, error: new Error(getSupabaseSetupMessage()) };
@@ -165,6 +165,12 @@ export async function signUpWithEmail({ name, email, password }) {
     options: {
       data: {
         name,
+        age,
+        weight,
+        height,
+        calorie_target: calorieTarget,
+        goal,
+        plan_focus: planFocus,
       },
     },
   });
@@ -176,6 +182,13 @@ export async function signUpWithEmail({ name, email, password }) {
       id: data.user.id,
       name,
       email,
+      age,
+      weight,
+      height,
+      calorie_target: calorieTarget,
+      goal,
+      plan_focus: planFocus,
+      target_weight: goal.includes("Perder") ? Math.max(0, Number(weight) - 5) : goal.includes("Ganhar") ? Number(weight) + 3 : Number(weight) || null,
     });
   }
 
@@ -787,6 +800,12 @@ export async function ensureProfileFromUser(user) {
     id: user.id,
     name: user.user_metadata?.name || "",
     email: user.email || "",
+    age: Number(user.user_metadata?.age) || null,
+    weight: Number(user.user_metadata?.weight) || null,
+    height: Number(user.user_metadata?.height) || null,
+    calorie_target: Number(user.user_metadata?.calorie_target) || null,
+    goal: user.user_metadata?.goal || null,
+    plan_focus: user.user_metadata?.plan_focus || null,
   });
 }
 
