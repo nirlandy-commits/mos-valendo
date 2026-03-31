@@ -2119,22 +2119,37 @@ function App() {
           <form className="space-y-5" onSubmit=${handleSignupSubmit}>
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">Nome completo</label>
-              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" value=${signupForm.name} onInput=${(e) => setSignupForm((current) => ({ ...current, name: e.currentTarget.value }))} placeholder="Seu nome" />
+              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" value=${signupForm.name} onInput=${(e) => {
+                const value = e.currentTarget.value;
+                setSignupForm((current) => ({ ...current, name: value }));
+              }} placeholder="Seu nome" />
             </div>
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">E-mail</label>
-              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="email" value=${signupForm.email} onInput=${(e) => setSignupForm((current) => ({ ...current, email: e.currentTarget.value }))} placeholder="exemplo@mos.app" />
+              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="email" value=${signupForm.email} onInput=${(e) => {
+                const value = e.currentTarget.value;
+                setSignupForm((current) => ({ ...current, email: value }));
+              }} placeholder="exemplo@mos.app" />
             </div>
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">Senha</label>
-              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="password" value=${signupForm.password} onInput=${(e) => setSignupForm((current) => ({ ...current, password: e.currentTarget.value }))} placeholder="••••••••" />
+              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="password" value=${signupForm.password} onInput=${(e) => {
+                const value = e.currentTarget.value;
+                setSignupForm((current) => ({ ...current, password: value }));
+              }} placeholder="••••••••" />
             </div>
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">Confirmar senha</label>
-              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="password" value=${signupForm.confirmPassword} onInput=${(e) => setSignupForm((current) => ({ ...current, confirmPassword: e.currentTarget.value }))} placeholder="••••••••" />
+              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="password" value=${signupForm.confirmPassword} onInput=${(e) => {
+                const value = e.currentTarget.value;
+                setSignupForm((current) => ({ ...current, confirmPassword: value }));
+              }} placeholder="••••••••" />
             </div>
             <label className="flex items-start gap-3 text-sm text-[#555]">
-              <input type="checkbox" className="mt-1" checked=${signupForm.acceptedTerms} onChange=${(e) => setSignupForm((current) => ({ ...current, acceptedTerms: e.currentTarget.checked }))} />
+              <input type="checkbox" className="mt-1" checked=${signupForm.acceptedTerms} onChange=${(e) => {
+                const checked = e.currentTarget.checked;
+                setSignupForm((current) => ({ ...current, acceptedTerms: checked }));
+              }} />
               <span>Eu aceito os Termos de Serviço e a Política de Privacidade.</span>
             </label>
             <button className=${`w-full h-14 rounded-[10px] font-bold text-base transition-transform ${isReady && !authBusy ? "bg-[#111] text-white active:scale-95" : "bg-[#111]/15 text-[#111]/45 cursor-not-allowed"}`} disabled=${!isReady || authBusy}>
@@ -2174,14 +2189,20 @@ function App() {
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">E-mail</label>
-              <input className="w-full h-14 px-0 border-0 border-b border-[#111]/35 rounded-none text-[#111] bg-transparent" type="email" value=${loginForm.email} onInput=${(e) => setLoginForm((current) => ({ ...current, email: e.currentTarget.value }))} placeholder="seu@email.com" />
+              <input className="w-full h-14 px-0 border-0 border-b border-[#111]/35 rounded-none text-[#111] bg-transparent" type="email" value=${loginForm.email} onInput=${(e) => {
+                const value = e.currentTarget.value;
+                setLoginForm((current) => ({ ...current, email: value }));
+              }} placeholder="seu@email.com" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <label className="text-[0.8rem] font-bold text-[#111]">Senha</label>
                 <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => openAuthScreen("recover-password")}>Esqueceu a senha?</button>
               </div>
-              <input className="w-full h-14 px-0 border-0 border-b border-[#111]/35 rounded-none text-[#111] bg-transparent" type="password" value=${loginForm.password} onInput=${(e) => setLoginForm((current) => ({ ...current, password: e.currentTarget.value }))} placeholder="••••••••" />
+              <input className="w-full h-14 px-0 border-0 border-b border-[#111]/35 rounded-none text-[#111] bg-transparent" type="password" value=${loginForm.password} onInput=${(e) => {
+                const value = e.currentTarget.value;
+                setLoginForm((current) => ({ ...current, password: value }));
+              }} placeholder="••••••••" />
             </div>
             <button
               type="button"
@@ -2246,7 +2267,10 @@ function App() {
           <form className="space-y-6" onSubmit=${handleRecoverSubmit}>
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">E-mail</label>
-              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="email" value=${recoverEmail} onInput=${(e) => setRecoverEmail(e.currentTarget.value)} placeholder="seu@email.com" />
+              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="email" value=${recoverEmail} onInput=${(e) => {
+                const value = e.currentTarget.value;
+                setRecoverEmail(value);
+              }} placeholder="seu@email.com" />
             </div>
             <button className=${`w-full h-14 rounded-[10px] font-bold text-base transition-transform ${isReady && !authBusy ? "bg-[#111] text-white active:scale-95" : "bg-[#111]/15 text-[#111]/45 cursor-not-allowed"}`} disabled=${!isReady || authBusy}>
               ${authBusy ? "Enviando..." : "Enviar link"}
@@ -3477,7 +3501,10 @@ function App() {
               type="search"
               placeholder="Buscar comida, alimento, suplemento..."
               value=${searchQuery}
-              onInput=${(e) => setSearchQuery(e.currentTarget.value)}
+              onInput=${(e) => {
+                const value = e.currentTarget.value;
+                setSearchQuery(value);
+              }}
             />
             ${
               searchQuery
