@@ -7,6 +7,7 @@ function readWindowConfig() {
   return {
     url: String(config.url || "").trim(),
     anonKey: String(config.anonKey || "").trim(),
+    redirectUrl: String(config.redirectUrl || "").trim(),
   };
 }
 
@@ -18,9 +19,10 @@ function readLocalConfig() {
     return {
       url: String(parsed.url || "").trim(),
       anonKey: String(parsed.anonKey || "").trim(),
+      redirectUrl: String(parsed.redirectUrl || "").trim(),
     };
   } catch (error) {
-    return { url: "", anonKey: "" };
+    return { url: "", anonKey: "", redirectUrl: "" };
   }
 }
 
@@ -40,6 +42,17 @@ export function getSupabaseSetupMessage() {
 }
 
 let supabaseClient = null;
+
+function getAuthRedirectUrl() {
+  const config = getSupabaseConfig();
+  if (config.redirectUrl) return config.redirectUrl;
+
+  if (globalThis.location?.origin && globalThis.location?.pathname) {
+    return `${globalThis.location.origin}${globalThis.location.pathname}`;
+  }
+
+  return undefined;
+}
 
 export function normalizeAppMessage(input) {
   const message = String(input || "").trim();
@@ -159,10 +172,13 @@ export async function signUpWithEmail({ name, email, password, age = 0, weight =
     return { ok: false, error: new Error(getSupabaseSetupMessage()) };
   }
 
+  const redirectTo = getAuthRedirectUrl();
+
   const { data, error } = await client.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: redirectTo,
       data: {
         name,
         age,
@@ -241,9 +257,36 @@ export async function sendRecoverEmail(email) {
     return { ok: false, error: new Error(getSupabaseSetupMessage()) };
   }
 
-  const { error } = await client.auth.resetPasswordForEmail(email);
+  const redirectTo = getAuthRedirectUrl();
+
+  const { error } = await client.auth.resetPasswordForEmail(
+    email,
+    redirectTo ? { redirectTo } : undefined,
+  );
   if (error) return { ok: false, error };
   return { ok: true };
+}
+
+export async function updatePassword(password) {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ok: false, error: new Error(getSupabaseSetupMessage()) };
+  }
+
+  const { data, error } = await client.auth.updateUser({ password });
+  if (error) return { ok: false, error };
+  return { ok: true, user: data?.user || null };
+}
+
+export function subscribeToAuthChanges(callback) {
+  const client = getSupabaseClient();
+  if (!client) return () => {};
+
+  const { data } = client.auth.onAuthStateChange((event, session) => {
+    callback(event, session);
+  });
+
+  return () => data?.subscription?.unsubscribe?.();
 }
 
 export async function signOutUser() {

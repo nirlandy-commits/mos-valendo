@@ -26,6 +26,8 @@ import {
   signInWithEmail,
   signOutUser,
   signUpWithEmail,
+  subscribeToAuthChanges,
+  updatePassword,
   updateSupplementEntry,
 } from "./lib/auth.js";
 
@@ -866,6 +868,9 @@ function App() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
+  const [resetPasswordForm, setResetPasswordForm] = useState({ password: "", confirmPassword: "" });
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetPasswordConfirm, setShowResetPasswordConfirm] = useState(false);
   const [authReady, setAuthReady] = useState(() => !isSupabaseConfigured());
   const authConfigured = isSupabaseConfigured();
 
@@ -1120,6 +1125,26 @@ function App() {
     };
   }, [authConfigured]);
 
+  useEffect(() => {
+    if (!authConfigured) return undefined;
+
+    const unsubscribe = subscribeToAuthChanges((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        clearAuthNotice();
+        setResetPasswordForm({ password: "", confirmPassword: "" });
+        setShowResetPassword(false);
+        setShowResetPasswordConfirm(false);
+        setScreen("reset-password");
+        showAuthNotice(
+          "Seu link de recuperação foi validado. Agora defina uma nova senha para voltar a entrar no MOS.",
+          { tone: "info", title: "Criar nova senha" },
+        );
+      }
+    });
+
+    return unsubscribe;
+  }, [authConfigured]);
+
   const foodMeals = state.consumedMeals[foodDate] || (demoDataEnabled && foodDate === todayKey ? consumedMeals : []);
 
   const allConsumedFoods = (state.consumedMeals[date] || (demoDataEnabled ? consumedMeals : [])).flatMap((meal) => meal.foods);
@@ -1147,7 +1172,7 @@ function App() {
   const markedFoodDates = new Set(Object.entries(state.consumedMeals).filter(([, meals]) => Array.isArray(meals) && meals.length).map(([key]) => key));
   const markedWaterDates = new Set(Object.entries(state.waterHistory || {}).filter(([, entries]) => Array.isArray(entries) && entries.length).map(([key]) => key));
   const waterViewDateLabel = waterHistoryDate === todayKey ? "Hoje" : formatDateLabel(waterHistoryDate);
-  const isSignedIn = !["welcome", "signup", "login", "recover-password", "legal"].includes(screen);
+  const isSignedIn = !["welcome", "signup", "login", "recover-password", "reset-password", "legal"].includes(screen);
   const notifications = notificationsCleared
     ? []
     : [
@@ -1622,10 +1647,13 @@ function App() {
         showAuthNotice(result.error?.message || "Não foi possível enviar o link agora.");
         return;
       }
-      showAuthNotice("Se existir uma conta com esse e-mail, o link de recuperação será enviado.", {
-        tone: "info",
-        title: "Verifique seu e-mail",
-      });
+      showAuthNotice(
+        "Se existir uma conta com esse e-mail, enviaremos um link para redefinir a senha. Verifique sua caixa de entrada, spam e promoções.",
+        {
+          tone: "info",
+          title: "Verifique seu e-mail",
+        },
+      );
     } else {
       showAuthNotice(`${getSupabaseSetupMessage()} Enquanto isso, este fluxo segue em modo de demonstração.`, {
         tone: "info",
@@ -1636,6 +1664,48 @@ function App() {
     setScreen("login");
     setLoginForm((current) => ({ ...current, email }));
     setRecoverEmail("");
+  }
+
+  async function handleResetPasswordSubmit(event) {
+    event.preventDefault();
+
+    const password = resetPasswordForm.password;
+    const confirmPassword = resetPasswordForm.confirmPassword;
+
+    if (!password || !confirmPassword) return;
+    if (password.length < 6) {
+      showAuthNotice("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      showAuthNotice("As senhas precisam ser iguais para continuar.");
+      return;
+    }
+
+    if (!authConfigured) {
+      showAuthNotice("A redefinição real depende do Supabase configurado.", {
+        tone: "info",
+        title: "Modo de demonstração",
+      });
+      return;
+    }
+
+    setAuthBusy(true);
+    const result = await updatePassword(password);
+    setAuthBusy(false);
+
+    if (!result.ok) {
+      showAuthNotice(result.error?.message || "Não foi possível redefinir a senha agora.");
+      return;
+    }
+
+    setResetPasswordForm({ password: "", confirmPassword: "" });
+    setLoginForm((current) => ({ ...current, password: "" }));
+    showAuthNotice("Sua senha foi atualizada com sucesso. Agora você já pode entrar com a nova senha.", {
+      tone: "success",
+      title: "Senha redefinida",
+    });
+    setScreen("login");
   }
 
   function handleSocialLogin(provider) {
@@ -2459,6 +2529,109 @@ function App() {
           </form>
 
           <button className="text-sm font-bold text-[#111] flex items-center gap-2" onClick=${() => openAuthScreen("login")}>
+            <${Icon} name="arrow_back" className="text-[1rem]" />
+            <span>Voltar para o login</span>
+          </button>
+        </main>
+      </div>
+    `;
+  }
+
+  function renderResetPassword() {
+    const isReady = resetPasswordForm.password && resetPasswordForm.confirmPassword;
+
+    return html`
+      <div className="bg-white text-[#111] min-h-screen" data-auth-screen="true">
+        <header className="border-b border-black/10">
+          <div className="h-16 px-6 max-w-md mx-auto flex items-center justify-between">
+            <${AuthWordmark} />
+            <button onClick=${() => openAuthScreen("login")}>
+              <${Icon} name="close" className="text-[#111]" />
+            </button>
+          </div>
+        </header>
+
+        <main className="px-6 py-8 max-w-md mx-auto space-y-8">
+          <section className="space-y-4 pt-10">
+            <h1 className="text-[3rem] leading-[0.94] font-black text-[#111]">Criar nova senha</h1>
+            <p className="text-[1.2rem] leading-snug text-[#6e7178]">
+              Defina sua nova senha para voltar a entrar no MOS com segurança.
+            </p>
+          </section>
+
+          ${renderAuthNoticeCard()}
+
+          <form className="space-y-6" onSubmit=${handleResetPasswordSubmit}>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <label className="text-[0.8rem] font-bold text-[#111]">Nova senha</label>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-[0.8rem] font-bold text-[#8a8a8a]"
+                  onClick=${() => setShowResetPassword((current) => !current)}
+                >
+                  <${Icon}
+                    name=${showResetPassword ? "visibility_off" : "visibility"}
+                    className="text-[1rem]"
+                  />
+                  <span>${showResetPassword ? "Ocultar senha" : "Ver senha"}</span>
+                </button>
+              </div>
+              <input
+                className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]"
+                type=${showResetPassword ? "text" : "password"}
+                value=${resetPasswordForm.password}
+                onInput=${(e) => {
+                  const value = e.currentTarget.value;
+                  setResetPasswordForm((current) => ({ ...current, password: value }));
+                }}
+                placeholder="Mínimo de 6 caracteres"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <label className="text-[0.8rem] font-bold text-[#111]">Confirmar nova senha</label>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-[0.8rem] font-bold text-[#8a8a8a]"
+                  onClick=${() => setShowResetPasswordConfirm((current) => !current)}
+                >
+                  <${Icon}
+                    name=${showResetPasswordConfirm ? "visibility_off" : "visibility"}
+                    className="text-[1rem]"
+                  />
+                  <span>${showResetPasswordConfirm ? "Ocultar senha" : "Ver senha"}</span>
+                </button>
+              </div>
+              <input
+                className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]"
+                type=${showResetPasswordConfirm ? "text" : "password"}
+                value=${resetPasswordForm.confirmPassword}
+                onInput=${(e) => {
+                  const value = e.currentTarget.value;
+                  setResetPasswordForm((current) => ({ ...current, confirmPassword: value }));
+                }}
+                placeholder="Repita sua nova senha"
+              />
+            </div>
+
+            <button
+              className=${`w-full h-14 rounded-[10px] font-bold text-base transition-transform ${
+                isReady && !authBusy
+                  ? "bg-[#111] text-white active:scale-95"
+                  : "bg-[#111]/15 text-[#111]/45 cursor-not-allowed"
+              }`}
+              disabled=${!isReady || authBusy}
+            >
+              ${authBusy ? "Salvando..." : "Salvar nova senha"}
+            </button>
+          </form>
+
+          <button
+            className="text-sm font-bold text-[#111] flex items-center gap-2"
+            onClick=${() => openAuthScreen("login")}
+          >
             <${Icon} name="arrow_back" className="text-[1rem]" />
             <span>Voltar para o login</span>
           </button>
@@ -3953,6 +4126,7 @@ function App() {
       ${authReady && !isSignedIn && screen === "signup" && renderSignup()}
       ${authReady && !isSignedIn && screen === "login" && renderLogin()}
       ${authReady && !isSignedIn && screen === "recover-password" && renderRecoverPassword()}
+      ${authReady && !isSignedIn && screen === "reset-password" && renderResetPassword()}
       ${authReady && !isSignedIn && screen === "legal" && renderLegal()}
 
       ${authReady && isSignedIn && screen === "home" && renderHome()}
