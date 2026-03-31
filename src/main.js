@@ -2182,7 +2182,7 @@ function App() {
 
           <div className="space-y-4 pb-5">
             ${authConfigured
-              ? html`<div className="rounded-[10px] bg-[#eef6ff] border border-[#dbe7ff] p-4 text-sm text-[#111]">Bem-vinda ao MOS. Entre ou crie sua conta para começar sua rotina com mais clareza e consistência.</div>`
+              ? html`<div className="rounded-[10px] bg-[#eef6ff] border border-[#dbe7ff] p-4 text-sm text-[#111]">Bem-vinda ao MOS. Entre ou crie sua conta para organizar sua alimentação, hidratação e evolução em um só lugar.</div>`
               : html`<div className="rounded-[10px] bg-[#fff6f2] border border-[#f5ddd5] p-4 text-sm text-[#111]">${getSupabaseSetupMessage()}</div>`}
             <button className="w-full h-16 bg-[#111] text-white rounded-[10px] font-bold text-base active:scale-95 transition-transform flex items-center justify-center gap-2" onClick=${() => openAuthScreen("signup")}>
               <span>Começar</span>
@@ -2294,7 +2294,7 @@ function App() {
               <div className="flex items-center justify-between gap-3">
                 <label className="text-[0.8rem] font-bold text-[#111]">Senha</label>
                 <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => setShowSignupPassword((current) => !current)}>
-                  ${showSignupPassword ? "Ocultar senha" : "Ver senha"}
+                  ${showSignupPassword ? "Ocultar senha" : "Mostrar senha"}
                 </button>
               </div>
               <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type=${showSignupPassword ? "text" : "password"} value=${signupForm.password} onInput=${(e) => {
@@ -2306,7 +2306,7 @@ function App() {
               <div className="flex items-center justify-between gap-3">
                 <label className="text-[0.8rem] font-bold text-[#111]">Confirmar senha</label>
                 <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => setShowSignupConfirmPassword((current) => !current)}>
-                  ${showSignupConfirmPassword ? "Ocultar senha" : "Ver senha"}
+                  ${showSignupConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
                 </button>
               </div>
               <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type=${showSignupConfirmPassword ? "text" : "password"} value=${signupForm.confirmPassword} onInput=${(e) => {
@@ -2366,7 +2366,7 @@ function App() {
                 <label className="text-[0.8rem] font-bold text-[#111]">Senha</label>
                 <div className="flex items-center gap-4">
                   <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => setShowLoginPassword((current) => !current)}>
-                    ${showLoginPassword ? "Ocultar senha" : "Ver senha"}
+                    ${showLoginPassword ? "Ocultar senha" : "Mostrar senha"}
                   </button>
                   <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => openAuthScreen("recover-password")}>Esqueceu a senha?</button>
                 </div>
