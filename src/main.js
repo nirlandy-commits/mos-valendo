@@ -2055,7 +2055,7 @@ function App() {
 
   function renderWelcome() {
     return html`
-      <div className="bg-white text-[#111] min-h-screen">
+      <div className="bg-white text-[#111] min-h-screen" data-auth-screen="true">
         <main className="min-h-screen px-7 py-8 max-w-md mx-auto flex flex-col">
           <div className="pt-2">
             <${AuthWordmark} />
@@ -2098,7 +2098,7 @@ function App() {
       signupForm.acceptedTerms;
 
     return html`
-      <div className="bg-white text-[#111] min-h-screen">
+      <div className="bg-white text-[#111] min-h-screen" data-auth-screen="true">
         <header className="border-b border-black/10">
           <div className="h-16 px-6 max-w-md mx-auto flex items-center justify-between">
             <${AuthWordmark} />
@@ -2159,7 +2159,7 @@ function App() {
     const isReady = loginForm.email.trim() && loginForm.password;
 
     return html`
-      <div className="bg-white text-[#111] min-h-screen">
+      <div className="bg-white text-[#111] min-h-screen" data-auth-screen="true">
         <main className="px-6 py-8 max-w-md mx-auto space-y-8">
           <${AuthWordmark} />
 
@@ -2225,7 +2225,7 @@ function App() {
     const isReady = recoverEmail.trim();
 
     return html`
-      <div className="bg-white text-[#111] min-h-screen">
+      <div className="bg-white text-[#111] min-h-screen" data-auth-screen="true">
         <header className="border-b border-black/10">
           <div className="h-16 px-6 max-w-md mx-auto flex items-center justify-between">
             <${AuthWordmark} />
