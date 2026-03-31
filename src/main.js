@@ -2272,14 +2272,14 @@ OLD = nil
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">Nome completo</label>
               <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" value=${signupForm.name} onInput=${(e) => {
-                const value = e.currentTarget.value;
+                const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                 setSignupForm((current) => ({ ...current, name: value }));
               }} placeholder="Seu nome" />
             </div>
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">E-mail</label>
               <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="email" value=${signupForm.email} onInput=${(e) => {
-                const value = e.currentTarget.value;
+                const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                 setSignupForm((current) => ({ ...current, email: value }));
               }} placeholder="exemplo@mos.app" />
             </div>
@@ -2287,14 +2287,14 @@ OLD = nil
               <div className="space-y-2">
                 <label className="text-[0.8rem] font-bold text-[#111]">Idade</label>
                 <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="number" min="10" step="1" value=${signupForm.age} onInput=${(e) => {
-                  const value = e.currentTarget.value;
+                  const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                   setSignupForm((current) => ({ ...current, age: value }));
                 }} placeholder="30" />
               </div>
               <div className="space-y-2">
                 <label className="text-[0.8rem] font-bold text-[#111]">Altura (cm)</label>
                 <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="number" min="100" step="1" value=${signupForm.height} onInput=${(e) => {
-                  const value = e.currentTarget.value;
+                  const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                   setSignupForm((current) => ({ ...current, height: value }));
                 }} placeholder="170" />
               </div>
@@ -2303,14 +2303,14 @@ OLD = nil
               <div className="space-y-2">
                 <label className="text-[0.8rem] font-bold text-[#111]">Peso atual (kg)</label>
                 <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="number" min="20" step="0.1" value=${signupForm.weight} onInput=${(e) => {
-                  const value = e.currentTarget.value;
+                  const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                   setSignupForm((current) => ({ ...current, weight: value }));
                 }} placeholder="77.7" />
               </div>
               <div className="space-y-2">
                 <label className="text-[0.8rem] font-bold text-[#111]">Objetivo</label>
                 <select className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111] bg-white" value=${signupForm.goal} onChange=${(e) => {
-                  const value = e.currentTarget.value;
+                  const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                   setSignupForm((current) => ({ ...current, goal: value }));
                 }}>
                   <option value="lose">Perder peso</option>
@@ -2333,7 +2333,7 @@ OLD = nil
                 </button>
               </div>
               <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type=${showSignupPassword ? "text" : "password"} value=${signupForm.password} onInput=${(e) => {
-                const value = e.currentTarget.value;
+                const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                 setSignupForm((current) => ({ ...current, password: value }));
               }} placeholder="••••••••" />
             </div>
@@ -2346,7 +2346,7 @@ OLD = nil
                 </button>
               </div>
               <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type=${showSignupConfirmPassword ? "text" : "password"} value=${signupForm.confirmPassword} onInput=${(e) => {
-                const value = e.currentTarget.value;
+                const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                 setSignupForm((current) => ({ ...current, confirmPassword: value }));
               }} placeholder="••••••••" />
             </div>
@@ -2393,7 +2393,7 @@ OLD = nil
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">E-mail</label>
               <input className="w-full h-14 px-0 border-0 border-b border-[#111]/35 rounded-none text-[#111] bg-transparent" type="email" value=${loginForm.email} onInput=${(e) => {
-                const value = e.currentTarget.value;
+                const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                 setLoginForm((current) => ({ ...current, email: value }));
               }} placeholder="seu@email.com" />
             </div>
@@ -2409,7 +2409,7 @@ OLD = nil
                 </div>
               </div>
               <input className="w-full h-14 px-0 border-0 border-b border-[#111]/35 rounded-none text-[#111] bg-transparent" type=${showLoginPassword ? "text" : "password"} value=${loginForm.password} onInput=${(e) => {
-                const value = e.currentTarget.value;
+                const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                 setLoginForm((current) => ({ ...current, password: value }));
               }} placeholder="••••••••" />
             </div>
@@ -2457,7 +2457,7 @@ OLD = nil
             <div className="space-y-2">
               <label className="text-[0.8rem] font-bold text-[#111]">E-mail</label>
               <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="email" value=${recoverEmail} onInput=${(e) => {
-                const value = e.currentTarget.value;
+                const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                 setRecoverEmail(value);
               }} placeholder="seu@email.com" />
             </div>
@@ -2524,7 +2524,7 @@ OLD = nil
                 type=${showResetPassword ? "text" : "password"}
                 value=${resetPasswordForm.password}
                 onInput=${(e) => {
-                  const value = e.currentTarget.value;
+                  const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                   setResetPasswordForm((current) => ({ ...current, password: value }));
                 }}
                 placeholder="Mínimo de 6 caracteres"
@@ -2551,7 +2551,7 @@ OLD = nil
                 type=${showResetPasswordConfirm ? "text" : "password"}
                 value=${resetPasswordForm.confirmPassword}
                 onInput=${(e) => {
-                  const value = e.currentTarget.value;
+                  const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                   setResetPasswordForm((current) => ({ ...current, confirmPassword: value }));
                 }}
                 placeholder="Repita sua nova senha"
@@ -3798,7 +3798,7 @@ OLD = nil
               placeholder="Buscar comida, alimento, suplemento..."
               value=${searchQuery}
               onInput=${(e) => {
-                const value = e.currentTarget.value;
+                const value = e?.currentTarget?.value ?? e?.target?.value ?? "";
                 setSearchQuery(value);
               }}
             />
