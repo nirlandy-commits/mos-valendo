@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "https://esm.sh/react@18";
+import React, { useEffect, useMemo, useRef, useState } from "https://esm.sh/react@18";
 import { createRoot } from "https://esm.sh/react-dom@18/client";
 import htm from "https://esm.sh/htm@3";
 import {
@@ -32,6 +32,17 @@ import {
 } from "./lib/auth.js";
 
 const html = htm.bind(React.createElement);
+
+function isRecoveryRedirect() {
+  try {
+    const hash = globalThis.location?.hash?.replace(/^#/, "") || "";
+    if (!hash) return false;
+    const params = new URLSearchParams(hash);
+    return params.get("type") === "recovery";
+  } catch {
+    return false;
+  }
+}
 
 const STORAGE_KEY = "mos-stitch-faithful";
 
@@ -873,6 +884,7 @@ function App() {
   const [showResetPasswordConfirm, setShowResetPasswordConfirm] = useState(false);
   const [authReady, setAuthReady] = useState(() => !isSupabaseConfigured());
   const authConfigured = isSupabaseConfigured();
+  const recoveryFlowRef = useRef(isRecoveryRedirect());
 
   function markDraftDirty(key) {
     setDraftGuard({ key, dirty: true });
@@ -1102,7 +1114,7 @@ function App() {
 
       if (result.session && result.user) {
         applyHydratedAuthState(result);
-        setScreen("home");
+        setScreen(recoveryFlowRef.current ? "reset-password" : "home");
       } else {
         setState((current) => ({
           ...structuredClone(defaultState),
@@ -1114,7 +1126,7 @@ function App() {
             password: "",
           },
         }));
-        setScreen("welcome");
+        setScreen(recoveryFlowRef.current ? "reset-password" : "welcome");
       }
 
       setAuthReady(true);
@@ -1130,6 +1142,10 @@ function App() {
 
     const unsubscribe = subscribeToAuthChanges((event) => {
       if (event === "PASSWORD_RECOVERY") {
+        recoveryFlowRef.current = true;
+        if (globalThis.history?.replaceState) {
+          globalThis.history.replaceState(null, "", `${globalThis.location?.pathname || "/"}${globalThis.location?.hash || ""}`);
+        }
         clearAuthNotice();
         setResetPasswordForm({ password: "", confirmPassword: "" });
         setShowResetPassword(false);
@@ -1699,6 +1715,10 @@ function App() {
       return;
     }
 
+    recoveryFlowRef.current = false;
+    if (globalThis.history?.replaceState) {
+      globalThis.history.replaceState(null, "", globalThis.location?.pathname || "/");
+    }
     setResetPasswordForm({ password: "", confirmPassword: "" });
     setLoginForm((current) => ({ ...current, password: "" }));
     showAuthNotice("Sua senha foi atualizada com sucesso. Agora você já pode entrar com a nova senha.", {
