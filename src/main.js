@@ -838,6 +838,9 @@ function App() {
   const [authNoticeTitle, setAuthNoticeTitle] = useState("");
   const [authNoticeTone, setAuthNoticeTone] = useState("error");
   const [authBusy, setAuthBusy] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [authReady, setAuthReady] = useState(() => !isSupabaseConfigured());
   const authConfigured = isSupabaseConfigured();
 
@@ -2122,7 +2125,7 @@ function App() {
 
           <div className="space-y-4 pb-5">
             ${authConfigured
-              ? html`<div className="rounded-[10px] bg-[#eef6ff] border border-[#dbe7ff] p-4 text-sm text-[#111]">Supabase configurado. Esta versão já está pronta para autenticação real.</div>`
+              ? html`<div className="rounded-[10px] bg-[#eef6ff] border border-[#dbe7ff] p-4 text-sm text-[#111]">Bem-vinda ao MOS. Entre ou crie sua conta para começar sua rotina com mais clareza e consistência.</div>`
               : html`<div className="rounded-[10px] bg-[#fff6f2] border border-[#f5ddd5] p-4 text-sm text-[#111]">${getSupabaseSetupMessage()}</div>`}
             <button className="w-full h-16 bg-[#111] text-white rounded-[10px] font-bold text-base active:scale-95 transition-transform flex items-center justify-center gap-2" onClick=${() => openAuthScreen("signup")}>
               <span>Começar</span>
@@ -2181,15 +2184,25 @@ function App() {
               }} placeholder="exemplo@mos.app" />
             </div>
             <div className="space-y-2">
-              <label className="text-[0.8rem] font-bold text-[#111]">Senha</label>
-              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="password" value=${signupForm.password} onInput=${(e) => {
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-[0.8rem] font-bold text-[#111]">Senha</label>
+                <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => setShowSignupPassword((current) => !current)}>
+                  ${showSignupPassword ? "Ocultar senha" : "Ver senha"}
+                </button>
+              </div>
+              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type=${showSignupPassword ? "text" : "password"} value=${signupForm.password} onInput=${(e) => {
                 const value = e.currentTarget.value;
                 setSignupForm((current) => ({ ...current, password: value }));
               }} placeholder="••••••••" />
             </div>
             <div className="space-y-2">
-              <label className="text-[0.8rem] font-bold text-[#111]">Confirmar senha</label>
-              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type="password" value=${signupForm.confirmPassword} onInput=${(e) => {
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-[0.8rem] font-bold text-[#111]">Confirmar senha</label>
+                <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => setShowSignupConfirmPassword((current) => !current)}>
+                  ${showSignupConfirmPassword ? "Ocultar senha" : "Ver senha"}
+                </button>
+              </div>
+              <input className="w-full h-14 px-4 border border-[#111]/30 rounded-[10px] text-[#111]" type=${showSignupConfirmPassword ? "text" : "password"} value=${signupForm.confirmPassword} onInput=${(e) => {
                 const value = e.currentTarget.value;
                 setSignupForm((current) => ({ ...current, confirmPassword: value }));
               }} placeholder="••••••••" />
@@ -2242,11 +2255,16 @@ function App() {
               }} placeholder="seu@email.com" />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <label className="text-[0.8rem] font-bold text-[#111]">Senha</label>
-                <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => openAuthScreen("recover-password")}>Esqueceu a senha?</button>
+                <div className="flex items-center gap-4">
+                  <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => setShowLoginPassword((current) => !current)}>
+                    ${showLoginPassword ? "Ocultar senha" : "Ver senha"}
+                  </button>
+                  <button type="button" className="text-[0.8rem] font-bold text-[#8a8a8a]" onClick=${() => openAuthScreen("recover-password")}>Esqueceu a senha?</button>
+                </div>
               </div>
-              <input className="w-full h-14 px-0 border-0 border-b border-[#111]/35 rounded-none text-[#111] bg-transparent" type="password" value=${loginForm.password} onInput=${(e) => {
+              <input className="w-full h-14 px-0 border-0 border-b border-[#111]/35 rounded-none text-[#111] bg-transparent" type=${showLoginPassword ? "text" : "password"} value=${loginForm.password} onInput=${(e) => {
                 const value = e.currentTarget.value;
                 setLoginForm((current) => ({ ...current, password: value }));
               }} placeholder="••••••••" />
