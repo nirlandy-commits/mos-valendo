@@ -5379,6 +5379,11 @@ OLD = nil
       ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "register-supplement" && renderRegisterSupplement()}
       ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "supplement-detail" && renderSupplementDetail()}
       ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "water" && renderWater()}
+      ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "training" && renderTraining()}
+      ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "training-detail" && renderTrainingDetail()}
+      ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "training-execution" && renderTrainingExecution()}
+      ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "training-summary" && renderTrainingSummary()}
+      ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "training-edit" && renderTrainingEdit()}
       ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "profile" && renderProfile()}
       ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "measures" && renderMeasures()}
       ${!shouldRenderResetPassword && authReady && isSignedIn && screen === "about-app" && renderAboutApp()}
