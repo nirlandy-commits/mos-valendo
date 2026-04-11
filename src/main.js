@@ -303,11 +303,8 @@ function normalizeFood(food = {}) {
   };
 }
 
-function getSectionBackground(section = "home") {
-  if (["food", "food-detail"].includes(section)) return "bg-[#faf3f2]";
-  if (["plan", "plan-detail", "plan-config", "supplements", "supplement-detail", "register-supplement", "history"].includes(section)) return "bg-[#e9ecfa]";
-  if (section === "water") return "bg-surface";
-  return "bg-surface";
+function getSectionBackground() {
+  return "bg-[#f4f7ff]";
 }
 
 function getFoodAccent(name = "") {
@@ -718,13 +715,13 @@ function BottomNav({ active, onChange }) {
   ];
 
   return html`
-    <nav className="fixed bottom-0 left-0 w-full px-4 pb-4 bg-white/96 backdrop-blur-sm z-50">
-      <div className="max-w-md mx-auto w-full h-20 flex justify-around items-center">
+    <nav className="fixed bottom-0 left-0 w-full px-4 pb-4 bg-white z-50">
+      <div className="max-w-md mx-auto w-full h-20 flex justify-around items-center gap-1">
         ${items.map((item) => {
           const isActive = active === item.key;
           return html`
             <button
-              className=${`flex flex-col items-center justify-center ${isActive ? "bg-[#DFF37D] text-[#292B2D] rounded-full px-5 py-2 shadow-[0_8px_18px_rgba(223,243,125,0.35)]" : "text-[#292B2D] px-5 py-2 hover:bg-slate-100 rounded-full"} transition-all active:scale-98`}
+              className=${`flex flex-col items-center justify-center ${isActive ? "bottom-nav-active bg-[#DFF37D] text-[#0F172A] rounded-full px-4 py-2 shadow-[0_8px_18px_rgba(223,243,125,0.35)]" : "text-[#101846] px-4 py-2 hover:bg-slate-100 rounded-full"} transition-all active:scale-98`}
               onClick=${() => onChange(item.key)}
             >
               <${Icon} name=${item.icon} filled=${isActive} />
@@ -2085,18 +2082,18 @@ OLD = nil
     const formattedRemaining = Math.max(0, Math.round(remaining)).toLocaleString("pt-BR");
     const formattedTarget = Math.round(state.profile.calorieTarget).toLocaleString("pt-BR");
     return html`
-      <div className="min-h-screen pb-32 bg-[#E2F1F5]">
+      <div className="min-h-screen pb-32 ${getSectionBackground()}">
         <${TopBar} onLeft=${() => setDrawerOpen(true)} onSearch=${() => openSearch("home")} onRight=${openNotifications} />
         <main className="pt-24 px-6 max-w-md mx-auto" style=${{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style=${{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <section className="bg-white rounded-xl p-7 space-y-6 shadow-[0_14px_30px_rgba(41,43,45,0.05)] border border-white/80">
+            <section className="bg-white rounded-xl p-7 space-y-6 shadow-[0_14px_30px_rgba(15,23,42,0.08)] border border-[#e3e8ef]">
               <div className="flex items-center gap-3">
                 <span className="inline-flex w-2.5 h-2.5 rounded-full bg-[#b9ddd3]"></span>
                 <span className="text-[1rem] font-semibold text-jet-black">Resumo calórico</span>
               </div>
               <div className="flex items-end gap-4 text-left pr-2">
                 <span className="text-[3.6rem] font-black leading-none text-jet-black">${formattedRemaining}</span>
-                <span className="text-[1rem] font-[300] leading-none text-[#8d8d8d] pb-2 whitespace-nowrap">Restante</span>
+                <span className="text-[1rem] font-[300] leading-none text-[#0F172A]/75 pb-2 whitespace-nowrap">Restante</span>
               </div>
               <div className="w-full space-y-5">
                 <div className="h-4 w-full bg-[#d8eee7] rounded-full overflow-hidden">
@@ -2105,11 +2102,11 @@ OLD = nil
                 <div className="flex flex-wrap items-center gap-x-10 gap-y-3 w-full">
                   <div className="flex items-baseline gap-3 whitespace-nowrap">
                     <span className="text-[1.55rem] font-bold text-jet-black">${formattedConsumed}</span>
-                    <span className="text-[1.05rem] font-[300] text-[#8d8d8d]">Comido</span>
+                    <span className="text-[1.05rem] font-[300] text-[#0F172A]/75">Comido</span>
                   </div>
                   <div className="flex items-baseline gap-3 whitespace-nowrap">
                     <span className="text-[1.55rem] font-bold text-jet-black">${formattedTarget}</span>
-                    <span className="text-[1.05rem] font-[300] text-[#8d8d8d]">Meta de consumo</span>
+                    <span className="text-[1.05rem] font-[300] text-[#0F172A]/75">Meta de consumo</span>
                   </div>
                 </div>
               </div>
@@ -2122,7 +2119,7 @@ OLD = nil
                 { label: "Água", value: `${round(water / 1000)}`, unit: "l", color: "bg-royal-blue", bar: `${Math.min(100, (water / 2500) * 100)}%` },
               ].map(
                 (item) => html`
-                  <div className="bg-white rounded-xl p-5 flex flex-col items-center justify-between gap-3 min-h-[138px] shadow-[0_10px_24px_rgba(41,43,45,0.04)] border border-white/80">
+                  <div className="bg-white rounded-xl p-5 flex flex-col items-center justify-between gap-3 min-h-[138px] shadow-[0_10px_24px_rgba(15,23,42,0.08)] border border-[#e3e8ef]">
                     <div>
                       <span className="block text-[1.05rem] font-semibold text-jet-black mb-2 whitespace-nowrap">${item.label === "Proteína" ? "Proteinas" : item.label}</span>
                       <div className="flex items-baseline justify-center gap-1 whitespace-nowrap">
@@ -2140,26 +2137,26 @@ OLD = nil
           </div>
 
           <section className="grid grid-cols-1" style=${{ gap: "12px" }}>
-            <button className="bg-[#D9B8F3] rounded-[10px] p-8 h-40 flex flex-col justify-between active:scale-95 transition-all text-left shadow-[0_14px_28px_rgba(41,43,45,0.06)]" onClick=${() => setScreen("food")}>
+            <button className="bg-[#e9f7f1] rounded-[10px] p-8 h-40 flex flex-col justify-between active:scale-95 transition-all text-left shadow-[0_10px_22px_rgba(15,23,42,0.08)] border border-[#d7efe4]" onClick=${() => setScreen("food")}>
               <div className="flex items-center justify-between">
-                <${Icon} name="restaurant" className="text-jet-black text-4xl" />
-                <${Icon} name="arrow_forward" className="text-jet-black text-[2rem]" />
+                <${Icon} name="restaurant" className="text-[#0F172A] text-4xl opacity-90" />
+                <${Icon} name="arrow_forward" className="text-[#0F172A] text-[2rem] opacity-90" />
               </div>
-              <span className="text-jet-black text-[2.2rem] font-[200] leading-none whitespace-nowrap">Comida</span>
+              <span className="text-[#0F172A] text-[2.2rem] font-[200] leading-none whitespace-nowrap">Comida</span>
             </button>
-            <button className="bg-[#DFF37D] rounded-[10px] p-8 h-40 flex flex-col justify-between active:scale-95 transition-all text-left shadow-[0_14px_28px_rgba(41,43,45,0.06)]" onClick=${() => setScreen("plan")}>
+            <button className="bg-[#fbeed2] rounded-[10px] p-8 h-40 flex flex-col justify-between active:scale-95 transition-all text-left shadow-[0_10px_22px_rgba(15,23,42,0.08)] border border-[#f1d9ad]" onClick=${() => setScreen("plan")}>
               <div className="flex items-center justify-between">
-                <${Icon} name="description" className="text-jet-black text-4xl" />
-                <${Icon} name="arrow_forward" className="text-jet-black text-[2rem]" />
+                <${Icon} name="description" className="text-[#0F172A] text-4xl opacity-90" />
+                <${Icon} name="arrow_forward" className="text-[#0F172A] text-[2rem] opacity-90" />
               </div>
-              <span className="text-jet-black text-[2.2rem] font-[200] leading-none whitespace-nowrap">Plano alimentar</span>
+              <span className="text-[#0F172A] text-[2.2rem] font-[200] leading-none whitespace-nowrap">Plano alimentar</span>
             </button>
-            <button className="bg-[#4558C8] rounded-[10px] p-8 h-40 flex flex-col justify-between active:scale-95 transition-all text-left shadow-[0_14px_28px_rgba(41,43,45,0.08)]" onClick=${() => setScreen("water")}>
+            <button className="bg-[#e6f0ff] rounded-[10px] p-8 h-40 flex flex-col justify-between active:scale-95 transition-all text-left shadow-[0_10px_22px_rgba(15,23,42,0.08)] border border-[#cfe0fb]" onClick=${() => setScreen("water")}>
               <div className="flex items-center justify-between">
-                <${Icon} name="water_drop" className="text-white text-4xl" />
-                <${Icon} name="arrow_forward" className="text-white text-[2rem]" />
+                <${Icon} name="water_drop" className="text-[#0F172A] text-4xl opacity-90" />
+                <${Icon} name="arrow_forward" className="text-[#0F172A] text-[2rem] opacity-90" />
               </div>
-              <span className="text-white text-[2.2rem] font-[200] leading-none whitespace-nowrap">Água</span>
+              <span className="text-[#0F172A] text-[2.2rem] font-[200] leading-none whitespace-nowrap">Água</span>
             </button>
           </section>
 
@@ -2606,7 +2603,7 @@ OLD = nil
 
   function renderFood() {
     return html`
-      <div className="bg-[#faf3f2] text-on-surface min-h-screen pb-40">
+      <div className="${getSectionBackground()} text-on-surface min-h-screen pb-40">
         <${TopBar} onLeft=${() => setDrawerOpen(true)} onSearch=${() => openSearch("food")} onRight=${openNotifications} />
         <main className="pt-24 px-4 max-w-screen-xl mx-auto space-y-8">
           <section className="w-full">
@@ -2811,7 +2808,7 @@ OLD = nil
 
   function renderPlan() {
     return html`
-      <div className="bg-[#e9ecfa] text-on-surface min-h-screen pb-32">
+      <div className="${getSectionBackground()} text-on-surface min-h-screen pb-32">
         <${TopBar} onLeft=${() => setDrawerOpen(true)} onSearch=${() => openSearch("plan")} onRight=${openNotifications} />
         <main className="pt-24 pb-32 px-6 max-w-md mx-auto space-y-8">
           <header className="bg-[#DFF37D] text-[#292B2D] p-8 rounded-xl shadow-[0_14px_30px_rgba(41,43,45,0.06)]">
@@ -4057,6 +4054,36 @@ OLD = nil
 
   return html`
     <div>
+      <style>
+        body {
+          background: #f4f7ff;
+        }
+        .text-jet-black { color: #0F172A; }
+        .text-on-surface { color: #0F172A; }
+        .text-on-surface-variant { color: #334155; }
+        .text-outline { color: #475569; }
+        section.bg-white:not([class*="shadow"]),
+        div.bg-white:not([class*="shadow"]) {
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+          border-radius: 20px;
+        }
+        nav.fixed.bottom-0 {
+          background: #0f0f12;
+          box-shadow: 0 -10px 22px rgba(15, 23, 42, 0.2);
+        }
+        nav.fixed.bottom-0 button {
+          color: #f8f7f2;
+        }
+        nav.fixed.bottom-0 button.bottom-nav-active,
+        nav.fixed.bottom-0 button.bottom-nav-active:hover,
+        nav.fixed.bottom-0 button:not(.bottom-nav-active):hover {
+          color: #0F172A;
+        }
+        nav.fixed.bottom-0 button .material-symbols-outlined {
+          color: inherit;
+        }
+      </style>
       ${!authReady &&
       html`
         <div className="min-h-screen bg-white text-[#111] flex items-center justify-center px-6">
