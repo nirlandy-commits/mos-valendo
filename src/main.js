@@ -33,6 +33,37 @@ import {
 
 const html = htm.bind(React.createElement);
 
+const TRAINING_MUSCLE_GROUPS = [
+  {
+    label: "SUPERIOR",
+    options: ["Peito", "Costas", "Ombros", "Bíceps", "Tríceps", "Antebraço"],
+  },
+  {
+    label: "CORE",
+    options: ["Abdômen"],
+  },
+  {
+    label: "INFERIOR",
+    options: ["Glúteos", "Quadríceps", "Posterior de coxa", "Panturrilha"],
+  },
+  {
+    label: "GERAL",
+    options: ["Corpo inteiro", "Cardio", "Outro"],
+  },
+];
+
+const TRAINING_MUSCLE_OPTIONS = TRAINING_MUSCLE_GROUPS.flatMap((group) => group.options);
+
+const TRAINING_THEME = {
+  surface: "bg-white border border-[#e6e8ef] text-[#0F172A] shadow-[0_12px_22px_rgba(15,23,42,0.08)]",
+  surfaceSoft: "bg-surface-container-low border border-[#e6e8ef] text-[#0F172A]",
+  surfaceMuted: "bg-[#f2f3f5] border border-[#e6e8ef] text-[#0F172A]",
+  accentText: "text-[#0F172A]",
+  accentSurface: "bg-surface-container-low text-[#0F172A]",
+  mutedText: "text-[#0F172A]/70",
+  mutedBorder: "border-[#e6e8ef]",
+};
+
 function isRecoveryRedirect() {
   try {
     const hash = globalThis.location?.hash?.replace(/^#/, "") || "";
@@ -158,6 +189,30 @@ const defaultState = {
     { id: "s3", period: "Almoço", category: "Saúde", time: "12:30", name: "Ômega 3", dosage: "2 caps", instruction: "Consumir junto com refeição principal.", card: "bg-[#D9B8F3] text-custom-jet" },
     { id: "s4", period: "Pré-treino", category: "Energia", time: "16:30", name: "Cafeína", dosage: "210 mg", instruction: "Usar somente quando fizer sentido na rotina.", card: "bg-[#EF5F37] text-white" },
   ],
+  trainingPlans: [
+    {
+      id: "training-a",
+      name: "Peito + Ombro",
+      estimatedMinutes: 50,
+      exercises: [
+        { id: "training-a-1", name: "Supino reto", focus: "Peito", sets: 4, reps: "10-12", targetReps: 12, restSeconds: 90, suggestedLoadKg: 40, loadDelta: "+2kg" },
+        { id: "training-a-2", name: "Supino inclinado", focus: "Peito", sets: 4, reps: "8-10", targetReps: 10, restSeconds: 75, suggestedLoadKg: 36, loadDelta: "+2kg" },
+        { id: "training-a-3", name: "Crucifixo", focus: "Peito", sets: 3, reps: "12-15", targetReps: 15, restSeconds: 60, suggestedLoadKg: 12, loadDelta: "+1kg" },
+        { id: "training-a-4", name: "Desenvolvimento", focus: "Ombros", sets: 4, reps: "10-12", targetReps: 12, restSeconds: 90, suggestedLoadKg: 18, loadDelta: "+2kg" },
+      ],
+    },
+    {
+      id: "training-b",
+      name: "Costas + Bíceps",
+      estimatedMinutes: 55,
+      exercises: [
+        { id: "training-b-1", name: "Puxada frontal", focus: "Costas", sets: 4, reps: "10-12", targetReps: 12, restSeconds: 75, suggestedLoadKg: 45, loadDelta: "+5kg" },
+        { id: "training-b-2", name: "Remada baixa", focus: "Costas", sets: 4, reps: "10-12", targetReps: 12, restSeconds: 75, suggestedLoadKg: 40, loadDelta: "+2kg" },
+        { id: "training-b-3", name: "Rosca direta", focus: "Bíceps", sets: 3, reps: "8-10", targetReps: 10, restSeconds: 60, suggestedLoadKg: 20, loadDelta: "+2kg" },
+      ],
+    },
+  ],
+  trainingHistory: [],
   water: {},
   waterHistory: {},
 };
@@ -232,6 +287,264 @@ function normalizeMeasureEntry(entry = {}, index = 0) {
     muscleMass,
     bodyWater,
     metabolicAge,
+  };
+}
+
+function normalizeTrainingMuscleGroup(value = "") {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  if (!normalized) return "";
+
+  const aliasMap = {
+    peito: "Peito",
+    costas: "Costas",
+    "grande dorsal": "Costas",
+    "costas médias": "Costas",
+    "costas medias": "Costas",
+    ombros: "Ombros",
+    deltoides: "Ombros",
+    bíceps: "Bíceps",
+    biceps: "Bíceps",
+    tríceps: "Tríceps",
+    triceps: "Tríceps",
+    antebraço: "Antebraço",
+    antebraco: "Antebraço",
+    abdômen: "Abdômen",
+    abdomen: "Abdômen",
+    core: "Abdômen",
+    glúteos: "Glúteos",
+    gluteos: "Glúteos",
+    quadríceps: "Quadríceps",
+    quadriceps: "Quadríceps",
+    "posterior de coxa": "Posterior de coxa",
+    posterior: "Posterior de coxa",
+    panturrilha: "Panturrilha",
+    "corpo inteiro": "Corpo inteiro",
+    "full body": "Corpo inteiro",
+    cardio: "Cardio",
+    outro: "Outro",
+  };
+
+  const directMatch = aliasMap[normalized];
+  if (directMatch) return directMatch;
+
+  return TRAINING_MUSCLE_OPTIONS.find((option) => option.toLowerCase() === normalized) || "";
+}
+
+function normalizeTrainingExercise(exercise = {}, index = 0) {
+  const sets = Math.min(12, Math.max(1, Number(exercise.sets) || 3));
+  const reps = sanitizeTrainingReps(exercise.reps || `${exercise.targetReps || 10}`) || "10-12";
+  const targetReps = Math.max(1, Number(exercise.targetReps) || Number(String(reps).split("-").pop()) || 10);
+  return {
+    id: exercise.id || `training-exercise-${index + 1}`,
+    name: exercise.name || `Exercício ${index + 1}`,
+    focus: normalizeTrainingMuscleGroup(exercise.focus),
+    sets,
+    reps,
+    targetReps,
+    restSeconds: Math.min(600, Math.max(15, Number(exercise.restSeconds) || 60)),
+    suggestedLoadKg: Math.min(500, Math.max(0, Number(exercise.suggestedLoadKg) || 0)),
+    loadDelta: exercise.loadDelta || "",
+  };
+}
+
+function normalizeTrainingPlan(plan = {}, index = 0, options = {}) {
+  const { allowEmptyExercises = false } = options;
+  const normalizedExercises = Array.isArray(plan.exercises) && plan.exercises.length
+    ? plan.exercises.map((exercise, exerciseIndex) => normalizeTrainingExercise(exercise, exerciseIndex))
+    : [];
+  return {
+    id: plan.id || `training-plan-${index + 1}`,
+    name: plan.name || `Treino ${index + 1}`,
+    estimatedMinutes: Math.max(15, Number(plan.estimatedMinutes) || 45),
+    exercises: normalizedExercises.length || allowEmptyExercises
+      ? normalizedExercises
+      : [normalizeTrainingExercise({}, 0)],
+  };
+}
+
+function summarizeExerciseNames(plan = {}) {
+  const names = (plan.exercises || []).map((exercise) => exercise.name).filter(Boolean);
+  if (!names.length) return "Monte os exercícios deste treino para começar.";
+  if (names.length <= 3) return names.join(", ");
+  return `${names.slice(0, 3).join(", ")} +${names.length - 3}`;
+}
+
+function formatClock(totalSeconds = 0) {
+  const safe = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  if (hours > 0) return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getAverageReps(value = "") {
+  const parts = String(value)
+    .split("-")
+    .map((part) => Number(part.trim()))
+    .filter(Boolean);
+  if (!parts.length) return 0;
+  if (parts.length === 1) return parts[0];
+  return Math.round(parts.reduce((acc, part) => acc + part, 0) / parts.length);
+}
+
+function normalizeTrainingLookup(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function sanitizeTrainingReps(value = "") {
+  const raw = String(value || "").replace(/\s+/g, "").replace(/,+/g, "-");
+  if (!raw) return "";
+  const matches = raw.match(/\d+/g);
+  if (!matches?.length) return "";
+  const numbers = matches.map((item) => Math.min(50, Math.max(1, Number(item) || 0))).filter(Boolean);
+  if (!numbers.length) return "";
+  if (raw.includes("-") && numbers.length >= 2) {
+    const first = Math.min(numbers[0], numbers[1]);
+    const second = Math.max(numbers[0], numbers[1]);
+    return `${first}-${second}`;
+  }
+  return `${numbers[0]}`;
+}
+
+function parseTrainingLoadDelta(value = "") {
+  const match = String(value || "").match(/-?\d+(?:[.,]\d+)?/);
+  if (!match) return 0;
+  return Number(match[0].replace(",", ".")) || 0;
+}
+
+function formatTrainingLoad(value = 0) {
+  return `${round(Number(value) || 0)}kg`;
+}
+
+function buildTrainingExerciseLibrary(trainingPlans = []) {
+  const seen = new Map();
+  (trainingPlans || []).forEach((plan) => {
+    (plan.exercises || []).forEach((exercise) => {
+      const key = normalizeTrainingLookup(exercise.name);
+      if (!key || seen.has(key)) return;
+      seen.set(key, {
+        name: exercise.name,
+        focus: normalizeTrainingMuscleGroup(exercise.focus),
+        sets: Number(exercise.sets) || 3,
+        reps: sanitizeTrainingReps(exercise.reps) || "10-12",
+        restSeconds: Number(exercise.restSeconds) || 60,
+        suggestedLoadKg: Number(exercise.suggestedLoadKg) || 0,
+        loadDelta: exercise.loadDelta || "",
+      });
+    });
+  });
+  return Array.from(seen.values());
+}
+
+const TRAINING_EXERCISE_LIBRARY = buildTrainingExerciseLibrary(defaultState.trainingPlans);
+
+function getTrainingExerciseMatch(name = "", trainingPlans = [], trainingHistory = []) {
+  const lookup = normalizeTrainingLookup(name);
+  if (lookup.length < 2) return null;
+
+  const historyMatches = [];
+  (trainingHistory || []).forEach((entry) => {
+    (entry.exercises || []).forEach((exercise) => {
+      historyMatches.push({
+        ...exercise,
+        source: "history",
+        completedAt: entry.completedAt,
+      });
+    });
+  });
+
+  historyMatches.sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+
+  const exactHistory = historyMatches.find((exercise) => normalizeTrainingLookup(exercise.name) === lookup);
+  if (exactHistory) return exactHistory;
+
+  const library = [
+    ...buildTrainingExerciseLibrary(trainingPlans),
+    ...TRAINING_EXERCISE_LIBRARY,
+  ];
+  const dedupedLibrary = Array.from(
+    library.reduce((acc, exercise) => {
+      const key = normalizeTrainingLookup(exercise.name);
+      if (!key || acc.has(key)) return acc;
+      acc.set(key, exercise);
+      return acc;
+    }, new Map()).values(),
+  );
+
+  const exactLibrary = dedupedLibrary.find((exercise) => normalizeTrainingLookup(exercise.name) === lookup);
+  if (exactLibrary) return { ...exactLibrary, source: "library" };
+
+  const partialMatches = dedupedLibrary.filter((exercise) => {
+    const exerciseLookup = normalizeTrainingLookup(exercise.name);
+    return exerciseLookup.includes(lookup) || lookup.includes(exerciseLookup);
+  });
+  if (partialMatches.length === 1) return { ...partialMatches[0], source: "library" };
+
+  return null;
+}
+
+function applyTrainingExerciseSuggestion(exercise, match, nextName) {
+  if (!match) return normalizeTrainingExercise({ ...exercise, name: nextName });
+  const nextExercise = { ...exercise, name: nextName };
+  const isDefaultExercise =
+    !exercise.focus
+    && (Number(exercise.sets) || 3) === 3
+    && sanitizeTrainingReps(exercise.reps) === "10-12"
+    && (Number(exercise.restSeconds) || 60) === 60
+    && !(Number(exercise.suggestedLoadKg) || 0);
+
+  nextExercise.focus = normalizeTrainingMuscleGroup(match.focus) || nextExercise.focus;
+
+  if (match.source === "history" || isDefaultExercise) {
+    nextExercise.sets = Number(match.sets) || nextExercise.sets;
+    nextExercise.reps = sanitizeTrainingReps(match.reps) || nextExercise.reps;
+    nextExercise.restSeconds = Number(match.restSeconds) || nextExercise.restSeconds;
+    nextExercise.suggestedLoadKg = Number(match.suggestedLoadKg) || 0;
+    nextExercise.loadDelta = match.loadDelta || nextExercise.loadDelta;
+  }
+
+  return normalizeTrainingExercise(nextExercise);
+}
+
+function getTrainingProgressionSuggestion(exercise, trainingHistory = [], trainingPlans = []) {
+  const historyMatch = getTrainingExerciseMatch(exercise.name, trainingPlans, trainingHistory);
+  if (!historyMatch || historyMatch.source !== "history") return null;
+
+  const lastLoad = Number(historyMatch.suggestedLoadKg) || 0;
+  const loadDelta = parseTrainingLoadDelta(exercise.loadDelta || historyMatch.loadDelta);
+  const suggestedLoad = Math.max(lastLoad, Number(exercise.suggestedLoadKg) || 0) + Math.max(0, loadDelta);
+
+  return {
+    lastLoad,
+    suggestedLoad,
+    reps: sanitizeTrainingReps(historyMatch.reps) || sanitizeTrainingReps(exercise.reps),
+    sets: Number(historyMatch.sets) || Number(exercise.sets) || 0,
+    restSeconds: Number(historyMatch.restSeconds) || Number(exercise.restSeconds) || 0,
+    source: historyMatch,
+  };
+}
+
+function summarizeTrainingPlan(plan = {}) {
+  const exercises = Array.isArray(plan.exercises) ? plan.exercises : [];
+  const sets = exercises.reduce((acc, exercise) => acc + (Number(exercise.sets) || 0), 0);
+  const volumeTotal = exercises.reduce(
+    (acc, exercise) => acc + ((Number(exercise.suggestedLoadKg) || 0) * (Number(exercise.sets) || 0) * getAverageReps(exercise.reps)),
+    0,
+  );
+  return {
+    exercises: exercises.length,
+    sets,
+    volumeTotal,
   };
 }
 
@@ -386,6 +699,8 @@ function migrate(raw) {
     consumedMeals: raw.consumedMeals || raw.foodLog || {},
     planMeals: Array.isArray(raw.planMeals || raw.mealPlan) ? (raw.planMeals || raw.mealPlan).map((meal, index) => normalizeMeal(meal, index)) : defaultState.planMeals,
     supplements: Array.isArray(raw.supplements) ? raw.supplements.map((item, index) => normalizeSupplement(item, index)) : defaultState.supplements,
+    trainingPlans: Array.isArray(raw.trainingPlans) ? raw.trainingPlans.map((plan, index) => normalizeTrainingPlan(plan, index)) : defaultState.trainingPlans,
+    trainingHistory: Array.isArray(raw.trainingHistory) ? raw.trainingHistory : [],
     water: raw.water || {},
     waterHistory: raw.waterHistory || {},
   };
@@ -712,6 +1027,7 @@ function BottomNav({ active, onChange }) {
     { key: "food", label: "Comida", icon: "restaurant" },
     { key: "plan", label: "Plano", icon: "description" },
     { key: "water", label: "Água", icon: "water_drop" },
+    { key: "training", label: "Treino", icon: "fitness_center" },
   ];
 
   return html`
@@ -744,18 +1060,16 @@ function PlanConfigNav({ onOpenConfig, onOpenMeal, onOpenHistory, onGoHome }) {
 
   return html`
     <nav className="fixed bottom-0 left-0 w-full px-4 pb-4 bg-white z-50">
-      <div className="max-w-screen-md mx-auto grid grid-cols-4 gap-2 rounded-[10px] bg-white border border-black/5 p-2 shadow-[0_8px_24px_rgba(41,43,45,0.08)]">
-        ${items.map(
-          (item) => html`
-            <button
-              className=${`min-h-[76px] rounded-[10px] flex flex-col items-center justify-center gap-2 text-center active:scale-95 transition-transform ${item.active ? "bg-[#EF5F37] text-white" : "bg-surface-container-low text-[#292B2D]"}`}
-              onClick=${item.onClick}
-            >
-              <${Icon} name=${item.icon} className="text-[1.2rem]" />
-              <span className="text-[0.76rem] font-bold">${item.label}</span>
-            </button>
-          `,
-        )}
+      <div className="max-w-md mx-auto w-full h-20 flex justify-around items-center gap-1">
+        ${items.map((item) => html`
+          <button
+            className=${`flex flex-col items-center justify-center ${item.active ? "bottom-nav-active bg-[#DFF37D] text-[#0F172A] rounded-full px-4 py-2 shadow-[0_8px_18px_rgba(223,243,125,0.35)]" : "text-[#101846] px-4 py-2 hover:bg-slate-100 rounded-full"} transition-all active:scale-98`}
+            onClick=${item.onClick}
+          >
+            <${Icon} name=${item.icon} filled=${item.active} />
+            <span className="font-['Sora'] text-[0.6875rem] font-medium mt-1">${item.label}</span>
+          </button>
+        `)}
       </div>
     </nav>
   `;
@@ -855,6 +1169,12 @@ function App() {
   const [selectedConsumedId, setSelectedConsumedId] = useState(null);
   const [selectedFood, setSelectedFood] = useState(null);
   const [selectedSupplementId, setSelectedSupplementId] = useState(null);
+  const [selectedTrainingId, setSelectedTrainingId] = useState(null);
+  const [activeTraining, setActiveTraining] = useState(null);
+  const [completedTraining, setCompletedTraining] = useState(null);
+  const [trainingDraft, setTrainingDraft] = useState(null);
+  const [trainingClock, setTrainingClock] = useState(Date.now());
+  const [newTrainingExerciseId, setNewTrainingExerciseId] = useState(null);
   const [appNewsEntries] = useState([
     {
       id: "news-2026-03-30",
@@ -1055,7 +1375,7 @@ function App() {
       if (!active) return;
 
       if (result.error) {
-        showAuthNotice("Não foi possível verificar sua sessão agora. Revise a configuração do Supabase.");
+        showAuthNotice("Não foi possível validar sua sessão agora. Tente novamente ou faça login outra vez.");
         setAuthReady(true);
         return;
       }
@@ -1129,6 +1449,30 @@ function App() {
   const planTotals = summarizeFoods(state.planMeals.flatMap((meal) => meal.foods));
   const selectedPlan = state.planMeals.find((meal) => meal.id === selectedPlanId);
   const selectedConsumed = foodMeals.find((meal) => meal.id === selectedConsumedId);
+  const trainingPlans = Array.isArray(state.trainingPlans) ? state.trainingPlans : [];
+  const selectedTraining = trainingPlans.find((plan) => plan.id === selectedTrainingId) || trainingPlans[0] || null;
+  const activeTrainingPlan = activeTraining ? trainingPlans.find((plan) => plan.id === activeTraining.planId) || null : null;
+  const trainingHistory = Array.isArray(state.trainingHistory) ? state.trainingHistory : [];
+  const latestTrainingEntry = trainingHistory[0] || null;
+  const currentTrainingExerciseIndex = Math.max(0, activeTraining?.currentExerciseIndex ?? 0);
+  const currentTrainingExercise = activeTrainingPlan?.exercises?.[Math.min(currentTrainingExerciseIndex, Math.max(0, (activeTrainingPlan?.exercises?.length || 1) - 1))] || null;
+  const completedTrainingExerciseIds = activeTraining?.completedExerciseIds || [];
+  const completedTrainingExercises = activeTrainingPlan
+    ? activeTrainingPlan.exercises.filter((exercise) => completedTrainingExerciseIds.includes(exercise.id)).length
+    : 0;
+  const activeTrainingElapsedSeconds = activeTraining?.startedAt
+    ? Math.max(
+        0,
+        Math.floor(
+          (
+            ((activeTraining?.pausedAt || trainingClock) ?? trainingClock) -
+            activeTraining.startedAt -
+            (activeTraining.pausedTotalMs || 0)
+          ) / 1000,
+        ),
+      )
+    : 0;
+  const pausedTrainingSeconds = activeTraining?.pausedAt ? Math.max(0, Math.floor((trainingClock - activeTraining.pausedAt) / 1000)) : 0;
   const foodDateLabel = foodDate === todayKey ? "Hoje" : formatDateLabel(foodDate);
   const markedFoodDates = new Set(Object.entries(state.consumedMeals).filter(([, meals]) => Array.isArray(meals) && meals.length).map(([key]) => key));
   const markedWaterDates = new Set(Object.entries(state.waterHistory || {}).filter(([, entries]) => Array.isArray(entries) && entries.length).map(([key]) => key));
@@ -1183,6 +1527,21 @@ function App() {
       meta: "Água",
       action: () => setScreen("water"),
     })),
+    ...(latestTrainingEntry
+      ? [
+          {
+            id: `recent-training-${latestTrainingEntry.id}`,
+            icon: "fitness_center",
+            title: latestTrainingEntry.planName,
+            body: `${latestTrainingEntry.seriesCompleted} séries concluídas em ${Math.max(1, Math.round(latestTrainingEntry.durationSeconds / 60))} min.`,
+            meta: "Treino",
+            action: () => {
+              setSelectedTrainingId(latestTrainingEntry.planId);
+              setScreen("training-summary");
+            },
+          },
+        ]
+      : []),
     ...state.supplements.slice(0, 2).map((supplement) => ({
       id: `recent-supplement-${supplement.id}`,
       icon: "nutrition",
@@ -1218,6 +1577,18 @@ function App() {
       action: () => {
         setSelectedPlanId(meal.id);
         setScreen("plan-detail");
+      },
+    })),
+    ...trainingPlans.map((plan) => ({
+      id: `training-${plan.id}`,
+      icon: "fitness_center",
+      title: plan.name,
+      subtitle: `${plan.exercises.length} exercícios • ${plan.estimatedMinutes} min`,
+      meta: "Treino",
+      keywords: `${plan.name} ${plan.exercises.map((exercise) => exercise.name).join(" ")}`.toLowerCase(),
+      action: () => {
+        setSelectedTrainingId(plan.id);
+        setScreen("training-detail");
       },
     })),
     ...allConsumedFoods.map((food) => ({
@@ -2074,6 +2445,346 @@ OLD = nil
     });
   }
 
+  function buildBlankTrainingPlan() {
+    return normalizeTrainingPlan({
+      id: uid("training-plan"),
+      name: "Novo treino",
+      estimatedMinutes: 45,
+      exercises: [],
+    }, 0, { allowEmptyExercises: true });
+  }
+
+  function openTrainingDetail(planId) {
+    setSelectedTrainingId(planId);
+    setScreen("training-detail");
+  }
+
+  function openTrainingEdit(planId) {
+    const plan = trainingPlans.find((item) => item.id === planId);
+    setSelectedTrainingId(planId);
+    setTrainingDraft(normalizeTrainingPlan(plan || buildBlankTrainingPlan(), 0, { allowEmptyExercises: true }));
+    setScreen("training-edit");
+  }
+
+  function openTrainingCreate() {
+    const nextPlan = buildBlankTrainingPlan();
+    setSelectedTrainingId(nextPlan.id);
+    setTrainingDraft(nextPlan);
+    setScreen("training-edit");
+  }
+
+  function startTraining(planId) {
+    const plan = trainingPlans.find((item) => item.id === planId);
+    if (!plan) return;
+    const now = Date.now();
+    setSelectedTrainingId(plan.id);
+    setCompletedTraining(null);
+    setActiveTraining({
+      planId: plan.id,
+      startedAt: now,
+      pausedAt: null,
+      pausedTotalMs: 0,
+      currentExerciseIndex: 0,
+      completedExerciseIds: [],
+    });
+    setScreen("training-execution");
+  }
+
+  function openTrainingPause() {
+    setActiveTraining((current) => {
+      if (!current || current.pausedAt) return current;
+      return { ...current, pausedAt: Date.now() };
+    });
+    setModal("training-pause");
+  }
+
+  function resumeTraining() {
+    setActiveTraining((current) => {
+      if (!current?.pausedAt) return current;
+      const now = Date.now();
+      const pauseDuration = now - current.pausedAt;
+      return {
+        ...current,
+        pausedAt: null,
+        pausedTotalMs: current.pausedTotalMs + pauseDuration,
+      };
+    });
+    setModal(null);
+  }
+
+  function completeTrainingSession(session = activeTraining) {
+    const plan = trainingPlans.find((item) => item.id === session?.planId);
+    if (!plan || !session) return;
+    const finishedAt = Date.now();
+    const totalDurationSeconds = Math.max(0, Math.round((finishedAt - session.startedAt - session.pausedTotalMs - (session.pausedAt ? finishedAt - session.pausedAt : 0)) / 1000));
+    const summary = summarizeTrainingPlan(plan);
+    const completedIds = new Set(session.completedExerciseIds || []);
+    const completedExercisesList = plan.exercises.filter((exercise) => completedIds.has(exercise.id));
+    const seriesCompleted = completedExercisesList.reduce((acc, exercise) => acc + (Number(exercise.sets) || 0), 0);
+    const historyEntry = {
+      id: uid("training-history"),
+      date: todayKey,
+      completedAt: new Date(finishedAt).toISOString(),
+      planId: plan.id,
+      planName: plan.name,
+      durationSeconds: totalDurationSeconds,
+      exercisesCompleted: completedExercisesList.length,
+      seriesCompleted,
+      volumeTotal: summary.volumeTotal,
+      exercises: plan.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        focus: exercise.focus,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        restSeconds: exercise.restSeconds,
+        volume: (Number(exercise.suggestedLoadKg) || 0) * (Number(exercise.sets) || 0) * getAverageReps(exercise.reps),
+        suggestedLoadKg: exercise.suggestedLoadKg,
+        loadDelta: exercise.loadDelta,
+      })),
+    };
+
+    mutate((draft) => {
+      draft.trainingHistory = [historyEntry, ...(draft.trainingHistory || [])].slice(0, 20);
+    });
+    setCompletedTraining(historyEntry);
+    setActiveTraining(null);
+    setModal(null);
+    setScreen("training-summary");
+  }
+
+  function abandonTraining() {
+    setActiveTraining(null);
+    setModal(null);
+    setScreen("training-detail");
+  }
+
+  function markTrainingExerciseDone(exerciseId) {
+    if (!activeTrainingPlan) return;
+    setActiveTraining((current) => {
+      if (!current) return current;
+      const completedExerciseIds = Array.from(new Set([...(current.completedExerciseIds || []), exerciseId]));
+      const nextIndex = activeTrainingPlan.exercises.findIndex(
+        (exercise, index) => index > current.currentExerciseIndex && !completedExerciseIds.includes(exercise.id),
+      );
+      return {
+        ...current,
+        completedExerciseIds,
+        currentExerciseIndex: nextIndex >= 0 ? nextIndex : current.currentExerciseIndex,
+      };
+    });
+  }
+
+  function undoTrainingExerciseDone(exerciseId) {
+    if (!activeTrainingPlan) return;
+    setActiveTraining((current) => {
+      if (!current) return current;
+      const completedExerciseIds = (current.completedExerciseIds || []).filter((id) => id !== exerciseId);
+      const resetIndex = activeTrainingPlan.exercises.findIndex((exercise) => exercise.id === exerciseId);
+      return {
+        ...current,
+        completedExerciseIds,
+        currentExerciseIndex: resetIndex >= 0 ? resetIndex : current.currentExerciseIndex,
+      };
+    });
+  }
+
+  function requestTrainingFinish() {
+    setModal("training-finish-confirm");
+  }
+
+  function updateTrainingDraftField(field, value) {
+    setTrainingDraft((current) => (current ? { ...current, [field]: value } : current));
+  }
+
+  function updateTrainingExerciseField(exerciseId, field, value) {
+    setTrainingDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        exercises: current.exercises.map((exercise) =>
+          exercise.id === exerciseId
+            ? (() => {
+              if (field === "name") {
+                const nextName = String(value || "");
+                const match = getTrainingExerciseMatch(nextName, trainingPlans, trainingHistory);
+                return applyTrainingExerciseSuggestion(exercise, match, nextName);
+              }
+
+              if (field === "reps") {
+                return normalizeTrainingExercise({ ...exercise, reps: sanitizeTrainingReps(value) || "" });
+              }
+
+              if (field === "sets") {
+                return normalizeTrainingExercise({ ...exercise, sets: Math.min(12, Math.max(1, Number(value) || 1)) });
+              }
+
+              if (field === "restSeconds") {
+                return normalizeTrainingExercise({ ...exercise, restSeconds: Math.min(600, Math.max(15, Number(value) || 15)) });
+              }
+
+              if (field === "suggestedLoadKg") {
+                return normalizeTrainingExercise({ ...exercise, suggestedLoadKg: Math.min(500, Math.max(0, Number(value) || 0)) });
+              }
+
+              return normalizeTrainingExercise({ ...exercise, [field]: value });
+            })()
+            : exercise,
+        ),
+      };
+    });
+  }
+
+  function updateTrainingExerciseFocus(exerciseId, rawValue) {
+    const value = normalizeTrainingMuscleGroup(rawValue);
+    updateTrainingExerciseField(exerciseId, "focus", value);
+  }
+
+  function handleTrainingExerciseFocusChange(exerciseId, event) {
+    updateTrainingExerciseFocus(exerciseId, event?.target?.value || "");
+  }
+
+  function addTrainingExercise() {
+    markDraftDirty("training-edit");
+    setTrainingDraft((current) => {
+      if (!current) return current;
+      const nextExercise = normalizeTrainingExercise(
+        {
+          id: uid("training-exercise"),
+          name: "Novo exercício",
+          focus: "",
+          sets: 3,
+          reps: "10-12",
+          targetReps: 12,
+          restSeconds: 60,
+          suggestedLoadKg: 0,
+          loadDelta: "",
+        },
+        current.exercises.length,
+      );
+      setNewTrainingExerciseId(nextExercise.id);
+      return {
+        ...current,
+        exercises: [
+          nextExercise,
+          ...current.exercises,
+        ],
+      };
+    });
+  }
+
+  function removeTrainingExercise(exerciseId) {
+    askDeleteConfirm({
+      title: "Remover exercício?",
+      message: "Tem certeza que deseja remover este exercício do treino? Essa ação não poderá ser desfeita.",
+      confirmLabel: "Remover exercício",
+      onConfirm: () => {
+        markDraftDirty("training-edit");
+        setTrainingDraft((current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            exercises: current.exercises.filter((exercise) => exercise.id !== exerciseId),
+          };
+        });
+        setNewTrainingExerciseId((current) => (current === exerciseId ? null : current));
+      },
+    });
+  }
+
+  function removeAllTrainingExercises() {
+    askDeleteConfirm({
+      title: "Remover todos os exercícios?",
+      message: "Tem certeza que deseja remover todos os exercícios deste treino? Essa ação não poderá ser desfeita.",
+      confirmLabel: "Remover todos",
+      onConfirm: () => {
+        markDraftDirty("training-edit");
+        setTrainingDraft((current) => (current ? { ...current, exercises: [] } : current));
+        setNewTrainingExerciseId(null);
+      },
+    });
+  }
+
+  function duplicateTrainingExercise(exerciseId) {
+    markDraftDirty("training-edit");
+    setTrainingDraft((current) => {
+      if (!current) return current;
+      const exerciseIndex = current.exercises.findIndex((exercise) => exercise.id === exerciseId);
+      if (exerciseIndex < 0) return current;
+      const sourceExercise = current.exercises[exerciseIndex];
+      const duplicatedExercise = normalizeTrainingExercise(
+        {
+          ...sourceExercise,
+          id: uid("training-exercise"),
+        },
+        exerciseIndex + 1,
+      );
+      duplicatedExercise.loadDelta = sourceExercise.loadDelta || duplicatedExercise.loadDelta;
+      setNewTrainingExerciseId(duplicatedExercise.id);
+      const nextExercises = [...current.exercises];
+      nextExercises.splice(exerciseIndex + 1, 0, duplicatedExercise);
+      return {
+        ...current,
+        exercises: nextExercises,
+      };
+    });
+  }
+
+  function adjustTrainingExerciseSets(exerciseId, delta) {
+    markDraftDirty("training-edit");
+    setTrainingDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        exercises: current.exercises.map((exercise) =>
+          exercise.id === exerciseId
+            ? normalizeTrainingExercise({
+              ...exercise,
+              sets: Math.min(12, Math.max(1, (Number(exercise.sets) || 1) + delta)),
+            })
+            : exercise,
+        ),
+      };
+    });
+  }
+
+  function saveTrainingDraft(event) {
+    event.preventDefault();
+    if (!trainingDraft) return;
+    const normalizedPlan = normalizeTrainingPlan({
+      ...trainingDraft,
+      exercises: trainingDraft.exercises.map((exercise) => normalizeTrainingExercise(exercise)),
+    }, trainingPlans.length, { allowEmptyExercises: true });
+    mutate((draft) => {
+      const existingIndex = draft.trainingPlans.findIndex((item) => item.id === normalizedPlan.id);
+      if (existingIndex >= 0) draft.trainingPlans[existingIndex] = normalizedPlan;
+      else draft.trainingPlans.push(normalizedPlan);
+    });
+    clearDraft("training-edit");
+    setSelectedTrainingId(normalizedPlan.id);
+    setTrainingDraft(null);
+    setScreen("training-detail");
+  }
+
+  useEffect(() => {
+    if (!newTrainingExerciseId) return undefined;
+    const scrollTimer = window.setTimeout(() => {
+      document.getElementById(`training-exercise-${newTrainingExerciseId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 120);
+    const focusTimer = window.setTimeout(() => {
+      document.getElementById(`training-exercise-name-${newTrainingExerciseId}`)?.focus();
+    }, 260);
+    const clearTimer = window.setTimeout(() => setNewTrainingExerciseId(null), 2200);
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(focusTimer);
+      window.clearTimeout(clearTimer);
+    };
+  }, [newTrainingExerciseId, trainingDraft]);
+
   function renderHome() {
     const currentMeals = state.consumedMeals[date] || [];
     const recentMeal = currentMeals[1] || currentMeals[0];
@@ -2157,6 +2868,13 @@ OLD = nil
                 <${Icon} name="arrow_forward" className="text-[#0F172A] text-[2rem] opacity-90" />
               </div>
               <span className="text-[#0F172A] text-[2.2rem] font-[200] leading-none whitespace-nowrap">Água</span>
+            </button>
+            <button className="bg-[#eee9ff] rounded-[10px] p-8 h-40 flex flex-col justify-between active:scale-95 transition-all text-left shadow-[0_10px_22px_rgba(15,23,42,0.08)] border border-[#ddd6fb]" onClick=${() => setScreen("training")}>
+              <div className="flex items-center justify-between">
+                <${Icon} name="fitness_center" className="text-[#0F172A] text-4xl opacity-90" />
+                <${Icon} name="arrow_forward" className="text-[#0F172A] text-[2rem] opacity-90" />
+              </div>
+              <span className="text-[#0F172A] text-[2.2rem] font-[200] leading-none whitespace-nowrap">Treino</span>
             </button>
           </section>
 
@@ -3139,6 +3857,555 @@ OLD = nil
           </section>
         </main>
         <${BottomNav} active="plan" onChange=${setScreen} />
+      </div>
+    `;
+  }
+
+  function renderTraining() {
+    return html`
+      <div className="${getSectionBackground("training")} text-on-surface min-h-screen pb-32">
+        <${TopBar} title="Treino" leftIcon="menu" centerBold=${false} onLeft=${() => setDrawerOpen(true)} onSearch=${() => openSearch("training")} onRight=${openNotifications} />
+        <main className="pt-24 px-4 max-w-md mx-auto space-y-6">
+          <section className="space-y-2">
+            <span className="text-sm text-[#EF5F37]">Sua jornada</span>
+            <div className="flex items-end justify-between gap-4">
+              <h1 className="text-[1.95rem] font-bold text-jet-black leading-tight">Meus treinos</h1>
+              <div className="${TRAINING_THEME.surface} rounded-[10px] px-4 py-3">
+                <p className="text-[0.75rem] ${TRAINING_THEME.accentText}">Treinos</p>
+                <strong className="text-[1.1rem] font-bold text-white">${trainingPlans.length}</strong>
+              </div>
+            </div>
+            <p className="text-sm text-on-surface-variant">Abra um treino para ver os exercícios, ajustar a rotina ou iniciar a sessão de hoje.</p>
+          </section>
+
+          <section className="space-y-3">
+            ${trainingPlans.map((plan) => {
+              const completedToday = trainingHistory.some((entry) => entry.planId === plan.id && entry.date === todayKey);
+              return html`
+                <button
+                  className="${TRAINING_THEME.surface} p-5 rounded-xl w-full text-left active:scale-[0.98] transition-transform flex flex-col gap-4"
+                  onClick=${() => openTrainingDetail(plan.id)}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[0.6875rem] ${TRAINING_THEME.accentText}">Treino</span>
+                      <h3 className="text-[1.25rem] font-bold text-white">${plan.name}</h3>
+                    </div>
+                    ${
+                      completedToday
+                        ? html`<div className="w-11 h-11 rounded-full ${TRAINING_THEME.accentSurface} flex items-center justify-center shrink-0"><${Icon} name="check" className="text-[#101846]" /></div>`
+                        : html`<${Icon} name="arrow_forward" className="${TRAINING_THEME.accentText} text-[1.75rem] shrink-0" />`
+                    }
+                  </div>
+                  <div className="flex items-center gap-4 text-sm ${TRAINING_THEME.mutedText}">
+                    <span>${plan.estimatedMinutes} min</span>
+                    <span>${plan.exercises.length} exercícios</span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[0.75rem] font-semibold ${TRAINING_THEME.accentText}">Exercícios do treino</p>
+                    <p className="text-sm ${TRAINING_THEME.mutedText}">${summarizeExerciseNames(plan)}</p>
+                  </div>
+                  ${completedToday ? html`<p className="text-sm ${TRAINING_THEME.accentText} font-bold">Treino concluído hoje</p>` : null}
+                </button>
+              `;
+            })}
+          </section>
+
+          <button className=${getPrimaryActionClass(false)} onClick=${openTrainingCreate}>
+            Novo treino
+          </button>
+        </main>
+        <${BottomNav} active="training" onChange=${setScreen} />
+      </div>
+    `;
+  }
+
+  function renderTrainingDetail() {
+    if (!selectedTraining) return renderTraining();
+    return html`
+      <div className="${getSectionBackground("training")} text-on-surface min-h-screen pb-32">
+        <${TopBar}
+          title=${selectedTraining.name}
+          leftIcon="arrow_back"
+          centerBold=${false}
+          onLeft=${() => setScreen("training")}
+          onSearch=${() => openSearch("training")}
+          onRight=${openNotifications}
+        />
+        <main className="pt-24 px-4 max-w-md mx-auto space-y-6">
+          <section className="grid grid-cols-2 gap-3">
+            <div className="${TRAINING_THEME.surface} rounded-xl p-5">
+              <span className="text-[0.75rem] ${TRAINING_THEME.accentText}">Minutos estimados</span>
+              <strong className="block mt-2 text-[2rem] font-bold text-white">${selectedTraining.estimatedMinutes}</strong>
+            </div>
+            <div className="${TRAINING_THEME.surface} rounded-xl p-5">
+              <span className="text-[0.75rem] ${TRAINING_THEME.accentText}">Exercícios</span>
+              <strong className="block mt-2 text-[2rem] font-bold text-white">${selectedTraining.exercises.length}</strong>
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <div>
+              <h2 className="text-lg font-bold text-jet-black">Exercícios do treino</h2>
+              <p className="text-sm text-on-surface-variant">A ordem abaixo mostra como esse treino está cadastrado hoje.</p>
+            </div>
+          </section>
+
+          <section className="${TRAINING_THEME.surface} rounded-xl px-4 divide-y ${TRAINING_THEME.mutedBorder}">
+            ${selectedTraining.exercises.map((exercise, index) => {
+              const accent = getFoodAccent(exercise.name);
+              return html`
+                <div className="py-5 flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style=${{ backgroundColor: accent.soft }}>
+                    <${Icon} name=${accent.icon} className="text-jet-black text-[1.35rem]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[0.8125rem] ${TRAINING_THEME.accentText}">Exercício ${index + 1}</p>
+                    <p className="text-[1.05rem] font-bold text-white">${exercise.name}</p>
+                    <p className="text-sm ${TRAINING_THEME.mutedText} mt-1">${exercise.sets} séries · ${exercise.reps} reps · ${exercise.restSeconds}s descanso</p>
+                  </div>
+                </div>
+              `;
+            })}
+          </section>
+
+          <div className="space-y-3">
+            <button className=${getPrimaryActionClass(false)} onClick=${() => startTraining(selectedTraining.id)}>
+              ${activeTraining?.planId === selectedTraining.id ? "Continuar treino" : "Iniciar treino"}
+            </button>
+            <button className=${getSecondaryActionClass(false)} onClick=${() => openTrainingEdit(selectedTraining.id)}>
+              Editar treino
+            </button>
+          </div>
+        </main>
+        <${BottomNav} active="training" onChange=${setScreen} />
+      </div>
+    `;
+  }
+
+  function renderTrainingExecution() {
+    if (!activeTraining || !activeTrainingPlan || !currentTrainingExercise) return renderTraining();
+    const allDone = completedTrainingExercises >= activeTrainingPlan.exercises.length;
+    const remainingExercises = Math.max(activeTrainingPlan.exercises.length - completedTrainingExercises, 0);
+    const progressPercent = Math.max(8, Math.min(100, (completedTrainingExercises / Math.max(1, activeTrainingPlan.exercises.length)) * 100));
+
+    return html`
+      <div className="${getSectionBackground("training")} text-on-surface min-h-screen pb-12">
+      <${TopBar}
+        title=${activeTrainingPlan.name}
+        leftIcon="arrow_back"
+        centerBold=${false}
+        onLeft=${openTrainingPause}
+        rightSlot=${html`
+          <button
+            className="hover:opacity-80 transition-opacity active:scale-95"
+            onClick=${openTrainingPause}
+            aria-label="Pausar treino"
+          >
+            <${Icon} name="pause" className="text-[1.35rem] text-[#101846]" />
+          </button>
+        `}
+      />
+        <main className="pt-24 px-4 max-w-md mx-auto space-y-6">
+          <section className="${TRAINING_THEME.surface} rounded-xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-sm ${TRAINING_THEME.accentText}">Treino em andamento</span>
+                <h1 className="text-[1.75rem] font-bold text-white">${activeTrainingPlan.name}</h1>
+                <p className="text-sm ${TRAINING_THEME.mutedText}">${completedTrainingExercises} de ${activeTrainingPlan.exercises.length} exercícios concluídos</p>
+              </div>
+              <div className="${TRAINING_THEME.accentSurface} rounded-[10px] px-4 py-3 text-right shrink-0">
+                <span className="block text-[0.75rem] text-[#101846]/72">Tempo</span>
+                <strong className="block text-[1.25rem] font-bold text-[#101846]">${formatClock(activeTrainingElapsedSeconds)}</strong>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#DFF37D]"
+                  style=${{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm ${TRAINING_THEME.mutedText}">
+                <span>${allDone ? "Treino pronto para encerrar" : `Agora: ${currentTrainingExercise.name}`}</span>
+                <span>${completedTrainingExercises} concluídos · ${remainingExercises} restantes</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-jet-black">Progresso do treino</h2>
+              <p className="text-sm text-on-surface-variant">Acompanhe o que já foi concluído, o exercício atual e o que ainda falta fazer.</p>
+            </div>
+            ${activeTrainingPlan.exercises.map((exercise, index) => {
+              const accent = getFoodAccent(exercise.name);
+              const done = completedTrainingExerciseIds.includes(exercise.id);
+              const isCurrent = !done && index === currentTrainingExerciseIndex && !allDone;
+              return html`
+                <div
+                  className=${[
+                    "w-full rounded-xl p-4 border space-y-3",
+                    done
+                      ? "bg-[#f4faef] border-[#d7ef9d]"
+                      : isCurrent
+                        ? "bg-white border-[#EF5F37] shadow-[0_10px_22px_rgba(41,43,45,0.05)]"
+                        : "bg-white border-surface-container-high",
+                  ].join(" ")}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style=${{ backgroundColor: done ? "#e5f5c3" : accent.soft }}>
+                        <${Icon} name=${done ? "check" : accent.icon} className="text-jet-black text-[1.1rem]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[0.75rem] text-on-surface-variant">Exercício ${index + 1}</p>
+                        <p className="font-bold text-jet-black">${exercise.name}</p>
+                        <p className="text-sm text-on-surface-variant">${exercise.sets} séries · ${exercise.reps} reps · ${exercise.restSeconds}s descanso</p>
+                      </div>
+                    </div>
+                    <span className=${["text-sm font-bold shrink-0", done ? "text-[#4b7a10]" : isCurrent ? "text-[#EF5F37]" : "text-on-surface-variant"].join(" ")}>
+                      ${done ? "Feito" : isCurrent ? "Agora" : "Depois"}
+                    </span>
+                  </div>
+                    ${
+                      isCurrent
+                        ? html`
+                          <div className="rounded-[10px] bg-[#fff4ef] px-4 py-3 space-y-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[0.8125rem] font-bold text-[#EF5F37]">Em andamento</span>
+                              <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[0.8125rem] font-medium text-jet-black">${exercise.sets} séries</span>
+                              <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[0.8125rem] font-medium text-jet-black">${exercise.reps} reps</span>
+                              <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[0.8125rem] font-medium text-jet-black">${exercise.restSeconds}s descanso</span>
+                            </div>
+                            <p className="text-sm text-on-surface-variant">Quando terminar este exercício, marque como concluído para ele entrar no progresso do treino.</p>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                className="min-h-11 rounded-[10px] border border-[#EF5F37] bg-white px-4 text-sm font-bold text-[#EF5F37] active:scale-[0.98] transition-transform"
+                                onClick=${() => markTrainingExerciseDone(exercise.id)}
+                              >
+                                Marcar como concluído
+                              </button>
+                            </div>
+                          </div>
+                        `
+                      : done
+                        ? html`
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="text-sm font-bold text-[#4b7a10]">Exercício concluído neste treino</div>
+                            <button
+                              className="inline-flex items-center gap-2 rounded-[10px] border border-outline-variant bg-surface-container-low px-3 py-2 text-sm font-medium text-jet-black active:scale-[0.98] transition-transform"
+                              onClick=${() => undoTrainingExerciseDone(exercise.id)}
+                            >
+                              <${Icon} name="undo" className="text-base" />
+                              <span>Desfazer</span>
+                            </button>
+                          </div>
+                        `
+                        : html`<p className="text-sm text-on-surface-variant">Este exercício aparece na sequência, depois que o atual for concluído.</p>`
+                  }
+                </div>
+              `;
+            })}
+          </section>
+
+          <button className=${getPrimaryActionClass(false)} onClick=${requestTrainingFinish}>
+            Concluir treino de hoje
+          </button>
+          <button className=${getSecondaryActionClass(false)} onClick=${openTrainingPause}>
+            Pausar treino
+          </button>
+        </main>
+      </div>
+    `;
+  }
+
+  function renderTrainingSummary() {
+    const summaryEntry = completedTraining || latestTrainingEntry;
+    if (!summaryEntry) return renderTraining();
+    return html`
+      <div className="${getSectionBackground("training")} text-on-surface min-h-screen pb-24">
+        <${TopBar}
+          title="Resumo da sessão"
+          leftIcon="arrow_back"
+          centerBold=${false}
+          onLeft=${() => setScreen("training")}
+          onSearch=${() => openSearch("training")}
+          onRight=${openNotifications}
+        />
+        <main className="pt-24 px-4 max-w-md mx-auto space-y-6">
+          <section className="${TRAINING_THEME.surface} rounded-xl p-6 space-y-2">
+            <span className="text-sm ${TRAINING_THEME.accentText}">Resumo da sessão</span>
+            <h1 className="text-[1.75rem] font-bold text-white">${summaryEntry.planName}</h1>
+            <div className="mt-4 ${TRAINING_THEME.surfaceMuted} rounded-xl p-5">
+              <span className="text-sm ${TRAINING_THEME.mutedText}">Volume total</span>
+              <strong className="block text-[2rem] font-bold ${TRAINING_THEME.accentText}">${summaryEntry.volumeTotal.toLocaleString("pt-BR")} kg</strong>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-2 gap-3">
+            <div className="${TRAINING_THEME.surface} rounded-xl p-5">
+              <span className="text-sm ${TRAINING_THEME.accentText}">Tempo</span>
+              <strong className="block mt-3 text-[1.8rem] font-bold text-white">${formatClock(summaryEntry.durationSeconds)}</strong>
+            </div>
+            <div className="${TRAINING_THEME.accentSurface} rounded-xl p-5">
+              <span className="text-sm text-[#101846]/72">Séries</span>
+              <strong className="block mt-3 text-[1.8rem] font-bold text-[#101846]">${summaryEntry.seriesCompleted}</strong>
+            </div>
+          </section>
+
+          <section className="${TRAINING_THEME.surface} rounded-xl p-6 space-y-4">
+            <div className="border-l-2 border-[#DFF37D] pl-4 space-y-2">
+              <span className="text-sm ${TRAINING_THEME.accentText}">Insight da sessão</span>
+              <p className="text-sm leading-relaxed ${TRAINING_THEME.mutedText}">Ótima leitura de volume para ${summaryEntry.planName}. Mantenha a técnica estável e tente subir a carga apenas quando completar as faixas de repetições com controle.</p>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-jet-black">Análise por exercício</h2>
+              <span className="text-sm text-on-surface-variant">${summaryEntry.exercisesCompleted} concluídos</span>
+            </div>
+            <div className="space-y-3">
+              ${summaryEntry.exercises.map(
+                (exercise) => html`
+                  <div className="bg-white rounded-xl p-5 shadow-[0_10px_22px_rgba(41,43,45,0.05)] space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-jet-black">${exercise.name}</p>
+                        <p className="text-sm text-on-surface-variant">${exercise.sets} séries · ${exercise.reps}</p>
+                      </div>
+                      <span className="text-sm font-bold text-[#EF5F37]">${Math.round(exercise.volume).toLocaleString("pt-BR")} kg</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-surface-container-low overflow-hidden">
+                      <div className="h-full rounded-full bg-[#EF5F37]" style=${{ width: `${Math.max(12, Math.min(100, (exercise.volume / Math.max(1, summaryEntry.volumeTotal)) * 100))}%` }}></div>
+                    </div>
+                  </div>
+                `,
+              )}
+            </div>
+          </section>
+        </main>
+        <${BottomNav} active="training" onChange=${setScreen} />
+      </div>
+    `;
+  }
+
+  function renderTrainingEdit() {
+    if (!trainingDraft) return renderTraining();
+    const guardTrainingEditNavigation = (action) =>
+      confirmDiscard(action, "Deseja sair da edição atual? As alterações do treino ainda não foram salvas.");
+    const trainingLabel = trainingDraft.name?.trim() || "Novo treino";
+    return html`
+      <div className="${getSectionBackground("training")} text-on-surface min-h-screen pb-32">
+        <${TopBar}
+          title="Editar treino"
+          leftIcon="arrow_back"
+          centerBold=${false}
+          onLeft=${() => guardTrainingEditNavigation(() => {
+            setTrainingDraft(null);
+            setScreen(selectedTraining ? "training-detail" : "training");
+          })}
+          onSearch=${() => openSearch("training")}
+          onRight=${openNotifications}
+        />
+        <main className="pt-24 px-4 max-w-md mx-auto space-y-6">
+          <form className="space-y-6" onSubmit=${saveTrainingDraft} onInput=${() => markDraftDirty("training-edit")} onChange=${() => markDraftDirty("training-edit")}>
+          <section className="rounded-xl p-6 space-y-4 ${TRAINING_THEME.surface}">
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold ${TRAINING_THEME.accentText}">Informações do treino</h2>
+              <p className="text-sm ${TRAINING_THEME.mutedText}">Comece ajustando o nome e o tempo estimado. Logo abaixo aparecem os exercícios exatamente como estão cadastrados hoje, só que em modo editável.</p>
+            </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-white">Nome do treino</label>
+                <input
+                  className="w-full h-14 px-4 rounded-[10px] bg-white text-jet-black border border-outline-variant"
+                  value=${trainingDraft.name}
+                  onInput=${(e) => updateTrainingDraftField("name", e.currentTarget.value)}
+                  placeholder="Ex: Treino A"
+                />
+                <p className="text-[0.8125rem] ${TRAINING_THEME.mutedText}">Esse é o nome que a pessoa vê na lista e também no treino em andamento.</p>
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-white">Duração estimada da sessão (minutos)</label>
+                <input
+                  className="w-full h-14 px-4 rounded-[10px] bg-white text-jet-black border border-outline-variant"
+                  type="number"
+                  min="15"
+                  max="180"
+                  value=${trainingDraft.estimatedMinutes}
+                  onInput=${(e) => updateTrainingDraftField("estimatedMinutes", Number(e.currentTarget.value))}
+                />
+                <p className="text-[0.8125rem] ${TRAINING_THEME.mutedText}">Use um tempo aproximado da sessão inteira.</p>
+              </div>
+              <div className="rounded-[10px] bg-white/90 p-4 border border-outline-variant text-sm text-jet-black">
+                <strong>${trainingLabel}</strong> · ${trainingDraft.estimatedMinutes} min estimados · ${trainingDraft.exercises.length} exercícios cadastrados
+              </div>
+            </section>
+
+            <section className="bg-white rounded-xl p-6 space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-lg font-bold text-jet-black">Exercícios do treino</h2>
+                <p className="text-sm text-on-surface-variant">Cada exercício aparece do jeito que já está cadastrado. Basta tocar nos campos que quiser ajustar.</p>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <button type="button" className="flex-1 min-h-12 rounded-[10px] border border-[#EF5F37] bg-white text-[#EF5F37] text-sm font-bold active:scale-[0.98] transition-transform" onClick=${addTrainingExercise}>
+                  Adicionar exercício
+                </button>
+                <button type="button" className="min-h-12 px-4 rounded-[10px] bg-surface-container-low text-jet-black text-sm font-medium active:scale-[0.98] transition-transform" onClick=${removeAllTrainingExercises}>
+                  Remover todos
+                </button>
+              </div>
+
+              ${trainingDraft.exercises.length
+                ? html`
+                  <div className="space-y-4">
+                    ${trainingDraft.exercises.map((exercise, index) => {
+                      const suggestion = getTrainingProgressionSuggestion(exercise, trainingHistory, trainingPlans);
+                      const summary = `${exercise.focus || "Selecione o grupo muscular"} · ${exercise.sets} séries · ${exercise.reps} reps · ${exercise.restSeconds}s descanso`;
+                      return html`
+                        <div id=${`training-exercise-${exercise.id}`} className="border border-outline-variant rounded-xl p-4 space-y-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-11 h-11 rounded-full bg-surface-container-low flex items-center justify-center">
+                                <${Icon} name="fitness_center" className="text-jet-black" />
+                              </div>
+                              <div>
+                                <p className="text-[0.75rem] text-on-surface-variant">Exercício ${index + 1}</p>
+                                <p className="font-bold text-jet-black">${exercise.name}</p>
+                                <p className="text-sm text-on-surface-variant">${summary}</p>
+                              </div>
+                            </div>
+                            <button type="button" className="text-[#d64545] font-bold text-sm" onClick=${() => removeTrainingExercise(exercise.id)}>
+                              Remover
+                            </button>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium text-jet-black">Nome do exercício</label>
+                              <input
+                                id=${`training-exercise-name-${exercise.id}`}
+                                className="w-full h-12 px-4 rounded-[10px] bg-surface-container-low text-jet-black border border-outline-variant"
+                                value=${exercise.name}
+                                onInput=${(e) => updateTrainingExerciseField(exercise.id, "name", e.currentTarget.value)}
+                              />
+                              <p className="text-[0.8125rem] text-on-surface-variant">Esse é o nome que aparece na lista do treino e também durante a execução.</p>
+                            </div>
+
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium text-jet-black">Grupo muscular</label>
+                              <select
+                                className="w-full h-12 px-4 rounded-[10px] bg-surface-container-low text-jet-black border border-outline-variant"
+                                value=${exercise.focus || ""}
+                                onChange=${(e) => handleTrainingExerciseFocusChange(exercise.id, e)}
+                              >
+                                <option value="">Selecione o grupo muscular</option>
+                                ${TRAINING_MUSCLE_GROUPS.map(
+                                  (group) => html`
+                                    <optgroup label=${group.label}>
+                                      ${group.options.map(
+                                        (option) => html`<option value=${option}>${option}</option>`,
+                                      )}
+                                    </optgroup>
+                                  `,
+                                )}
+                              </select>
+                              <p className="text-[0.8125rem] text-on-surface-variant">Selecione o principal grupo muscular trabalhado neste exercício.</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="grid gap-2">
+                                <label className="text-sm font-medium text-jet-black">Séries</label>
+                                <div className="flex items-center gap-2">
+                                  <button type="button" className="w-10 h-10 rounded-[10px] bg-surface-container-low text-jet-black font-bold" onClick=${() => adjustTrainingExerciseSets(exercise.id, -1)}>-</button>
+                                  <input
+                                    className="flex-1 h-12 px-4 rounded-[10px] bg-surface-container-low text-jet-black border border-outline-variant"
+                                    type="number"
+                                    min="1"
+                                    max="12"
+                                    value=${exercise.sets}
+                                    onInput=${(e) => updateTrainingExerciseField(exercise.id, "sets", e.currentTarget.value)}
+                                  />
+                                  <button type="button" className="w-10 h-10 rounded-[10px] bg-surface-container-low text-jet-black font-bold" onClick=${() => adjustTrainingExerciseSets(exercise.id, 1)}>+</button>
+                                </div>
+                              </div>
+                              <div className="grid gap-2">
+                                <label className="text-sm font-medium text-jet-black">Repetições por série</label>
+                                <input
+                                  className="w-full h-12 px-4 rounded-[10px] bg-surface-container-low text-jet-black border border-outline-variant"
+                                  value=${exercise.reps}
+                                  onInput=${(e) => updateTrainingExerciseField(exercise.id, "reps", e.currentTarget.value)}
+                                  placeholder="10-12"
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <label className="text-sm font-medium text-jet-black">Descanso entre séries (segundos)</label>
+                                <input
+                                  className="w-full h-12 px-4 rounded-[10px] bg-surface-container-low text-jet-black border border-outline-variant"
+                                  type="number"
+                                  min="15"
+                                  max="600"
+                                  value=${exercise.restSeconds}
+                                  onInput=${(e) => updateTrainingExerciseField(exercise.id, "restSeconds", e.currentTarget.value)}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <label className="text-sm font-medium text-jet-black">Carga de referência (kg)</label>
+                                <input
+                                  className="w-full h-12 px-4 rounded-[10px] bg-surface-container-low text-jet-black border border-outline-variant"
+                                  type="number"
+                                  min="0"
+                                  max="500"
+                                  value=${exercise.suggestedLoadKg}
+                                  onInput=${(e) => updateTrainingExerciseField(exercise.id, "suggestedLoadKg", e.currentTarget.value)}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium text-jet-black">Sugestão de progressão</label>
+                              <input
+                                className="w-full h-12 px-4 rounded-[10px] bg-surface-container-low text-jet-black border border-outline-variant"
+                                value=${exercise.loadDelta}
+                                onInput=${(e) => updateTrainingExerciseField(exercise.id, "loadDelta", e.currentTarget.value)}
+                                placeholder="Ex: +2kg"
+                              />
+                              <p className="text-[0.8125rem] text-on-surface-variant">Use para indicar pequenas evoluções quando estiver confortável com as repetições.</p>
+                            </div>
+
+                            ${suggestion
+                              ? html`
+                                  <div className="rounded-[10px] bg-[#f4f9ff] border border-[#d9e6ff] p-4 text-sm text-[#2e3f66] space-y-1">
+                                    <strong>Progressão sugerida</strong>
+                                    <p>Última carga: ${formatTrainingLoad(suggestion.lastLoad)} · Próxima meta: ${formatTrainingLoad(suggestion.suggestedLoad)}</p>
+                                  </div>
+                                `
+                              : null}
+
+                            <div className="flex items-center justify-between gap-2">
+                              <button type="button" className="min-h-10 rounded-[10px] border border-outline-variant bg-white px-4 text-sm font-medium text-jet-black active:scale-[0.98] transition-transform" onClick=${() => duplicateTrainingExercise(exercise.id)}>
+                                Duplicar exercício
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      `;
+                    })}
+                  </div>
+                `
+                : html`
+                  <div className="rounded-xl border border-dashed border-outline-variant p-6 text-center space-y-2">
+                    <p className="text-sm text-on-surface-variant">Nenhum exercício cadastrado ainda. Toque em <strong className="text-jet-black">Adicionar exercício</strong> para montar este treino.</p>
+                  </div>
+                `}
+            </section>
+
+            <button className=${getPrimaryActionClass(!isDraftDirty("training-edit"))} type="submit" disabled=${!isDraftDirty("training-edit")}>
+              Salvar treino
+            </button>
+          </form>
+        </main>
       </div>
     `;
   }
@@ -4171,6 +5438,65 @@ OLD = nil
           onPrevMonth=${() => setWaterHistoryMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
           onNextMonth=${() => setWaterHistoryMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
         />`
+      }
+
+      ${
+        isSignedIn &&
+        modal === "training-pause" &&
+        html`
+          <${Modal} title="Pausa" onClose=${resumeTraining}>
+            <div className="flex flex-col gap-5">
+              <div className="rounded-[10px] bg-white p-6 text-center space-y-3">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff4ef]">
+                  <${Icon} name="pause" className="text-[1.5rem] text-[#EF5F37]" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-lg font-bold text-jet-black">Treino pausado</p>
+                  <p className="text-sm leading-relaxed text-on-surface-variant">
+                    O treino está pausado há ${formatClock(pausedTrainingSeconds)}.
+                  </p>
+                </div>
+              </div>
+              <button className=${getPrimaryActionClass(false)} onClick=${resumeTraining}>
+                Continuar
+              </button>
+              <button
+                className="h-14 w-full rounded-[10px] border border-outline-variant bg-white px-4 text-base font-bold text-error active:scale-[0.98] transition-transform"
+                onClick=${abandonTraining}
+              >
+                Encerrar treino
+              </button>
+            </div>
+          </${Modal}>
+        `
+      }
+
+      ${
+        isSignedIn &&
+        modal === "training-finish-confirm" &&
+        html`
+          <${Modal} title="Concluir treino de hoje" onClose=${() => setModal(null)}>
+            <div className="flex flex-col gap-5">
+              <div className="rounded-[10px] bg-white p-6 text-center space-y-3">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff4ef]">
+                  <${Icon} name="check" className="text-[1.5rem] text-[#EF5F37]" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-lg font-bold text-jet-black">Deseja concluir o treino de hoje?</p>
+                  <p className="text-sm leading-relaxed text-on-surface-variant">
+                    Ao confirmar, você verá o resumo desta sessão e poderá voltar para os treinos depois.
+                  </p>
+                </div>
+              </div>
+              <button className=${getSecondaryActionClass(false)} onClick=${() => setModal(null)}>
+                Voltar
+              </button>
+              <button className=${getPrimaryActionClass(false)} onClick=${() => completeTrainingSession(activeTraining)}>
+                Concluir treino de hoje
+              </button>
+            </div>
+          </${Modal}>
+        `
       }
 
       ${
